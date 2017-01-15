@@ -1,0 +1,175 @@
+Title         : Goodstein Sequences
+Author        : Arthur Ozga
+Logo          : True
+Package       : amssymb
+
+[TITLE]
+
+
+Inspired by a recent remark of their unintuitiveness, I thought it might be worthwhile
+for me to learn about [Goodstein Sequences].
+
+# Base-$b$ Notation
+
+First, let's talk about writing numbers in base $b\in\mathbb{N}$.
+Fix $n\in \mathbb{N}$.
+
+~ Definition
+A *base-$b$ representation of $n$* is a sequence $\{a_i\}_{i=0}^\infty$ with
+all but finitely terms $0$, such that
+
+~~ Equation
+n = \sum_{i=0}^\infty a_i b^i
+~~
+
+and $0\leq a_i < b$.
+~
+
+~ Lemma
+Each $n\in \mathbb{Z}_{\geq 0}$ admits a unique base-$b$ representation.
+~
+~ Proof
+  First we handle existence. We argue by induction on $n$.
+  The base case is obvious.
+  Fix $n \in \mathbb{N}$.
+  There is some least $I\in \mathbb{N}$ such that $b^I > n$. Then using the Euclidean
+  Algorithm, we have that we can write $n = a_{I-1}b^{I-1} + r$ with unique $0 \leq r < b^{I-1}$
+  and unique $a_{I-1} > 0$ (or else we contradict the assumption about $I$).
+  Moreover, $a_{I-1} < b$ or else $n \geq b^I$. By induction, we can write $r$ in base-$b$
+  notation uniquely as $\sum_{i=0}^{I-2}b_ib^i$,
+  and so the unique base-$b$ representation of $n$ is
+
+~~ Equation
+  a_{I-1}b^{I-1} + \sum_{i=0}^{I-2}b_ib^i.
+~~
+~
+
+Let's say we want to go one step further and write the exponents themselves in base-$b$
+notation... and then write the exponents' exponents in base-$b$, and so on. We
+can define *extended base-$b$ notation* recursively in the following way:
+
+~ Definition
+For $n < b^b$, the recursive base-$b$ notation for $n$ is the ordinary base-$b$ notation.
+For $n \geq b^b$, the extended notation is
+~~ Equation
+n = \sum_{i=0}^\infty a_i b^i
+~~
+where $a_i \in \{0,..., b - 1\}$ with all but finitely many terms $0$ and
+the exponents $i$ are written in extended base-$b$ notation.
+~
+
+This recursive definition isn't circular because the exponents $i$ are strictly less than
+$n$.
+
+We will soon see that this very naturally mirrors the (unique!) Cantor Normal Form
+representation of ordinal numbers.
+
+# Goodstein Sequences
+
+Given $n\in \mathbb{N}$, the *Goodstein Sequence* $\{G(n)_i\}_{i=2}^\infty$ is
+defined as follows:
+
+~ Definition
+
+$G(n)_2$ is equal to $n$.
+$G(n)_{i + 1}$ is obtained from $G(n)_i$ in the following manner:
+Write $G(n)_i$ in base-$i$ notation, with coefficients $\{a_j\}_{j=0}^\infty$.
+Then 
+
+~~ Equation
+G(n)_{i+1} = \left( \sum_{j=0}^\infty a_j(i + 1)^j \right) - 1
+~~
+~
+
+That is, we increment the base by $1$, and decrement the total by $1$.
+
+So one part of the definition makes succeeding Goodstein numbers (much) bigger,
+while the other makes the next Goodstein number slightly smaller (by exactly one).
+
+A natural question is ask is whether, for fixed $n \in \mathbb{N}$, $G(n)_i$ diverges upwards, downwards, or tends towards a constant.
+
+Let's first consider the constant case. Suppose $G(n)_i = k$ for all $i > N$ for some $N\in \mathbb{N}$.
+Then, $G(n)_{|k| + 1} = k$. But that base-$(k + 1)$ notation for $k$ is precisely $k(|k| + 1)^0 = k$. So
+$G(n)_{|k| + 2} = k - 1$, a contradiction.
+
+So do the decrements ever catch up with base-incrementing operation? It would be nice if
+we could specify some sort of *invariant* that either always increases or always decreases
+between $G(n)_i$ and $G(n)_{i + 1}$ and is somehow tied to the property of whether
+$G(n)_i$ itself increases or decreases at each step.
+
+Then we could make a recursive/induction argument to demonstrate the ultimate behavior
+of the Goodstein sequences.
+
+# Ordinal Numbers
+
+John Baez has written a great [introduction] to countable ordinal numbers that does more justice
+to them than I could manage.
+
+There are two types of ordinals: *successor ordinals* and *limit ordinals*.
+
+~ Definition
+An ordinal $\alpha$ is a successor to $\beta$ is $\alpha > \beta$
+and for all ordinals $\delta > \beta$, we have that $\alpha \leq \delta$. In words,
+$\alpha$ is the smallest ordinal greater that $\beta$. We say $\alpha$ is a
+*successor ordinal* is $\alpha$ is a successor for some other ordinal.
+~
+~ Definition
+An ordinal $\alpha$ is a *limit ordinal* if it is not a successor ordinal. For example, the
+set $\omega$ is a limit ordinal because any ordinal $\beta < \omega$ is a finite ordinal,
+and $\beta < \beta + 1 < \omega$.
+~
+
+
+We will only concern ourselves with countable ordinals here. Here are some key properties.
+
+1. Ordinal numbers are *well-ordered*. That is, any set of ordinal numbers has a
+smallest element.
+
+3. Ordinal arithmetic is not commutative. $1 + \omega = \omega \neq \omega + 1$ and
+$2\omega = \omega \neq \omega 2$. Roughly speaking, if the ordinal on
+the left is smaller by a factor of a limit ordinal, it gets absorbed.
+
+4. Each ordinal number up to $\varepsilon_0$ can be represented uniquely as a sum
+~ Equation
+\omega^{a_1}b_1 + \omega^{a_2}b_2 + \cdots + \omega^{a_k}b_k
+~
+where the $a_i$ are a strictly decreasing sequence of ordinals.
+
+Well-ordered-ness has a formulation more amenable to induction:
+
+~ Theorem
+A class is well-ordered iff every strictly decreasing sequence of elements in
+the class has finite length.
+~
+
+~ Proof
+
+$\Rightarrow$:
+Suppose there is a sequence $\{a_i\}_{i = 0}^\infty$
+which is strictly decreasing.
+Consider $A = \{a_i : i\in \mathbb{N}\}$.
+If $A$ has a minimal element $a_i$ for some $i\in \mathbb{N}$,
+then $a_{i + 1} \not< a_i$,
+contradicting our assumption about the sequence being strictly-decreasing.
+So, $A$ does not have a minimal element.
+
+$\Leftarrow$:
+Fix some set $A$ whose elements are in the class but has no minimal element.
+Pick $a_0 \in A$. Then there is some $a_1 \in A$ such that $a_1 < a_0$
+(or else $a_0$ is minimal). We can continue in this way to recursively
+define $a_{i + 1}$ from $a_i$.
+~
+
+Armed with this knowledge, we are ready to attack the main problem.
+
+
+
+
+# Exercises
+
+1. Make precise the statement about non-commutativity of ordinal arithmetic.
+Then prove it.
+[Goodstein Sequences]: https://en.wikipedia.org/wiki/Goodstein's_theorem
+[introduction]: https://johncarlosbaez.wordpress.com/2016/06/29/large-countable-ordinals-part-1/
+
+[reference manual]: http://research.microsoft.com/en-us/um/people/daan/madoko/doc/reference.html  "Madoko reference manual"
