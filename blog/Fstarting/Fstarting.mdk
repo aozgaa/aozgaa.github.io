@@ -1,0 +1,56 @@
+Title         : Fstarting
+Author        : You
+Logo          : True
+
+[TITLE]
+
+When security vulnerabilities come up in conversation, invariably the bugs that
+"caused" the issue come up. I o
+of 
+
+Software security is tricky.
+
+Software development methodologies get bandied about left-and-right. In my work,
+I'm fortunate enough to work on a team that doesn't worry about burn-down charts,
+Kanban, or daily standups.
+
+Communication is essential to good software design. But in the creation of real,
+large pieces of software, invariably one reaches a point where the product just
+becomes *too big*. I'm not [the first] to acknowledge this issue, but it bears repeating
+because software development by tribal knowledge is an under-appreciated
+methodology. Perhaps it is inevitable[^inevitable].
+
+One approach I've taken is to gratuitously comment my code. Comments can serve
+as in-line documentation, filling in missing parts of the explanation of the code's
+functionality, and if you are already reading the source, it's easy to find.
+Unfortunately, comments quickly grow dated, and need to be actively maintained.
+If not, they may provide misleading information, ultimately providing negative value.
+Because (typically) only developers of a system read the source,
+updating comments seems to be a second-class task relative to updating
+other forms of documentation.
+
+Development by tribal knowledge.
+
+
+After hearing about [Project Everest] and dabbling a bit with [FStar], I
+thought I might 
+
+# Madoko 
+
+Madoko is a fast markdown processor for writing professional articles
+with a focus on simplicity and plain text readability.
+
+* Read the [reference manual].
+* Explore the upper-right toolbox menu to discover how Markdown works. 
+* `Alt-Q` reformats the current paragraph.
+
+
+
+
+[FOOTNOTES]
+[^inevitable]: One option is to prevent a software system from growing too large, but I don't know if it's a realistic goal for, eg, an operating system, compiler, or even an IDE (*cough* Visual Studio *cough*).
+
+[Project Everest]: https://project-everest.github.io/
+[FStar]: https://fstar-lang.org/
+[the first]: https://en.wikipedia.org/wiki/The_Mythical_Man-Month
+[reference manual]: http://research.microsoft.com/en-us/um/people/daan/madoko/doc/reference.html  "Madoko reference manual"
