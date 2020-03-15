@@ -9,6 +9,109 @@
 
 <body>
 
+<h2>Squating Technique</h2>
+
+
+<p>
+A friend of mine told me I was spending too much time learning how to squat rather than just doing it. They are probably right.
+</p>
+
+<p>
+Unfortunately, I'd picked up the excellent 
+<a href="https://aasgaardco.com/store/books-posters-dvd/books/starting-strength-basic-barbell-training"/><em>Starting Strength: Basic Barbell Training</em></a>, and I was not to be deterred in learning the safest technique to improve strength. Here are some of my notes on squatting:
+</p>
+
+<ul>
+	<li>lifter + barbell center-of-mass shoudl remain over midfoot</li>
+	<li>a lower bar allows for a more horizontal back at the bottom</li>
+	<li>front squats exert the butt more and hamstrings less</li>
+	<li>the bar shoudl sit under the spine of the scapula</li>
+	<li>low-bar vs high-bar squats:</li>
+	<ul>
+		<li>higher hamstring load</li>
+		<li>more horizontal back angle</li>
+		<li>more open knee angle</li>
+		<li>movement path is similar to deadlift &amp; power clean</li>
+	</ul>
+	<li>shoulder-width knees + 30&deg; toes + knees out &rArr; groin stretch and activation</li>
+	<li>squat depth: hips go below level with top of patellas</li>
+	<li>exercise: no weight squat</li>
+	<ul>
+		<li>back should be about 45&deg; at the bottom</li>
+		<li>at the bottom, think hips up, not forward</li>
+	</ul>
+	<li>keep neck in natural alignment -- think of squeezing a tennis ball with chin</li>
+	<li>eye-gaze: 4-5 feet in front of toes</li>
+	<li>narrower hands &rArr; more posterior shoulder flexion and keep thoracic spine extended + straight</li>
+	<li>wrists: hands above bar. They do not carry weight</li>
+	<li>tighten muscles before liftimg from rack</li>
+	<li>always face towards the rack -- forwards when re-racking</li>
+	<li>take only one step back from the rack</li>
+</ul>
+
+This is an incomplete summary of the 64 pages(!) devoted to the squat. Which if these did you find intuitive? Which were suprising?
+
+
+
+<h2>Sending Shame Emails When Gaming</h2>
+
+<p>
+My brother asked me to alert him everytime I start playing <emph>Magic the Gathering: Arena</emph>.
+One way to do this is to send an email every time I start the game.
+</p>
+<p>
+I looked up how to <a href="https://www.howtogeek.com/125045/how-to-easily-send-emails-from-the-windows-task-scheduler/">send emails programmatically on Windows</a> (the platform MTGA runs on).
+I found a perl program called sendemail that does this.
+There's an <a href="http://caspian.dotconf.net/menu/Software/SendEmail/">official-seeming page</a> from 2009, a <a href="http://freshmeat.sourceforge.net/projects/sendemail/">sourceforce page</a> which was last updated in 2009, and
+a <a href="https://github.com/mogaal/sendemail">github page</a> last updated in 2012 which seems to be the same program. I picked the most recently edited of these three thinking it might have some fixes (or maybe a backdoor!).
+After installing <a href="http://strawberryperl.com/">strawberry perl</a> and doing a naive invocation, I was met with:
+</p>
+<pre>
+$ perl path/to/sendEmail -f "aozgaa AT gmail DOT com" -u "starting mtg arena" -t "aozgaa AT gmail DOT com" -s "smtp.gmail.com:587" -o tls=yes -xu "aozgaa AT gmail DOT com" -xp 'mypassword' -m "some message"
+invalid SSL_version specified at /home/daedalus/perl5/lib/perl5/IO/Socket/SSL.pm line 728.
+</pre>
+<p>
+Huh? It looks like this issue has been encountered <a href="https://unix.stackexchange.com/questions/53065/invalid-ssl-version-specified-at-usr-share-perl5-io-socket-ssl-pm-line-332">before</a>. So I tried a few things, and eventually this patch looked reasonable:
+</p>
+<pre>
+$ git diff
+diff --git a/sendEmail b/sendEmail
+index 9f9392e..8a8dec2 100755
+--- a/sendEmail
++++ b/sendEmail
+@@ -1903,7 +1903,7 @@ else {
+     if ($conf{'tls_server'} == 1 and $conf{'tls_client'} == 1 and $opt{'tls'} =~ /^(yes|auto)$/) {
+         printmsg("DEBUG => Starting TLS", 2);
+         if (SMTPchat('STARTTLS')) { quit($conf{'error'}, 1); }
+-        if (! IO::Socket::SSL->start_SSL($SERVER, SSL_version => 'SSLv3 TLSv1')) {
++        if (! IO::Socket::SSL->start_SSL($SERVER)) {
+             quit("ERROR => TLS setup failed: " . IO::Socket::SSL::errstr(), 1);
+         }
+         printmsg("DEBUG => TLS: Using cipher: ". $SERVER->get_cipher(), 3);
+</pre>
+<p>
+(Note, it looks like this is necessary on both Windows and Linux). Now I get:
+</p>
+<pre>
+$ perl /path/to/sendEmail -f "aozgaa AT gmail DOT com" -u "starting mtg arena" -t "aozgaa AT gmail DOT com" -s "smtp.gmail.com:587" -o tls=yes -xu "aozgaa AT gmail DOT com" -xp 'mypassword' -m "some message"
+Mar 15 16:16:57 daedalus-arch sendEmail[56559]: ERROR => ERROR => SMTP-AUTH: Authentication to smtp.gmail.com:587 failed.
+</pre>
+<p>
+So putting in my actual password (you didn't think it was that bad, did you?) didn't work.
+I enabled IMAP in <a href="https://mail.google.com/mail/u/0/#settings/fwdandpop">gmail's settings</a>.
+Stack Overflow stopped giving answers, so I went to <a href="https://support.google.com/accounts/answer/185833?hl=en">Google's password help</a> where I was reminded that I have 2-Factor authentication enabled. So I needed to make an <a href="https://myaccount.google.com/apppasswords">app password</a>. I chose a Windows password for mail because, well, that's what we're doing.
+Finally, I used the app password, and now I can send an email to myself (or my brother!). I then made a (powershell) script that sends an email then runs MTGA:
+</p>
+<pre>
+perl /path/to/sendEmail -f "aozgaa AT gmail DOT com" -u "starting mtg arena" -t "aozgaa AT gmail DOT com" -s "smtp.gmail.com:587" -o tls=yes -xu "aozgaa AT gmail DOT com" -xp 'apppassword' -m "some message"
+
+&"C:\Program Files (x86)\Wizards of the Coast\MTGA\MTGALauncher\MTGALauncher.exe"
+</pre>
+
+<p>
+Now I can go back to feeding my addiction.
+</p>
+
 <h2>Resources for Building a Webserver</h2>
 
 <strong>Exercise</strong>: pick a use-case (eg: static file server, streaming file server, database webserver)
