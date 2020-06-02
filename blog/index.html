@@ -1,21 +1,166 @@
-<!doctype html>
+<!DOCTYPE html>
 
 <html>
 <head>
 
 <title>Blog&nbsp;|&nbsp;Arthur Ozga</title>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css" integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous">
+
+<!-- The loading of KaTeX is deferred to speed up page rendering -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js" integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz" crossorigin="anonymous"></script>
+
+<!-- To automatically render math in text elements, include the auto-render extension: -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+
 </head>
 
 <body>
+
+<h2>Implementing a Dynamic Programming algorithm in Q</h2>
+<p>
+Curious about array-based programming, I recently started reading the online
+book <a href="https://code.kx.com/q4m3/">Q For Mortals</a> by Jeffry Borror.
+
+In an intrductory section, Borror covers an example of post-hoc optimal
+execution in trading. The task is to pick the best time to buy then sell stock
+to realize a maximum profit in a trading period, with up to one buy and sell allowed
+(equivalently, we can require that exactly one trade occurs and you can buy/sell at the same time step),
+assuming no market impact.
+
+This is a typical phone interview level problem for software positions.
+</p>
+<p>
+A slightly more advanced question is to ask for optimal execution with up to two,
+three, or more non-overlapping buys and sells. Solutions, including the special case of two buys, can easily be found be found
+<a
+href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+at+most+twice&t=ffab&ia=web">online</a>.
+</p>
+<p>
+I'd like to consider what an implementation in q/kdb, missing from the online
+search results, would look like.
+</p>
+<p>
+In the case of 1 buy and sell, Borror offers the following koan:
+</p>
+<pre>
+q)n:10000000            / number of trade price ticks
+q)pxs:90.0+(n?2001)%100 / initialize trades with uniform distribution [90.0,110.0]
+q)max pxs-mins pxs      / fold max over a vector of incrementally best trades
+</pre>
+<p>
+The precedence order in k is right-to-left,so let's go step by step:
+<ol>
+    <li> Take a vector of prices. </li>
+    <li> Build a vector of the minimum price up to the current index</li>
+    <li> Subtract this vector from the price at the current index, creating a vector of optimal trades ending at the current index</li>
+    <li> Take the most profitable trade from the list</li>
+</ol>
+</p>
+<p>
+Let \(OE_k(P)\) denote a vector of the optimal optimal execution with \(k\) trades, given prices \(P\).
+The entry \(OE_k(P)_i\) is the optimal result for a trade that sells the last trade at time \(i\).
+</p>
+<p>
+We can see a straightforward mapping between the implementation and the following recurrence relation:
+</p>
+$$
+\begin{aligned}
+OE_1(P)_i
+&= \max_{0 \leq j \leq i} \left\{ p_i - p_j \right\} \\
+&= p_i - \min_{0 \leq j \leq i} \left\{ p_j \right\} \\
+\end{aligned}
+$$
+For two trades, we want to pick an sale time \(j\), lock in the profit of the most profitable trade before that point,
+and then add in the most profitable trade starting at the pivot. A recurrence expression is
+$$
+\begin{aligned}
+OE_2(P)_i
+&= \max_{0\leq j \leq i} \left\{ p_i - p_j + \max_{0 \leq l \leq j}OE_1(P)_l \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ \max_{0 \leq l \leq j} OE_1(P)_l\ - p_j \right\}
+\end{aligned}
+$$
+Perhaps the notation is suggestive to enough to show where this is going:
+$$
+\begin{aligned}
+OE_{k+1}(P)_i
+&= \max_{0\leq j \leq i} \left\{ p_i - p_j + \max_{0 \leq l \leq j}OE_k(P)_l \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ \max_{0 \leq l \leq j} OE_k(P)_l\ - p_j \right\} \\
+OE_0(P)_i &= 0 \\
+OE_k(P)_0 &= 0.
+\end{aligned}
+$$
+<p>
+Do a sanity check that the recurrence relation holds for \(OE_1(P)_i\).
+</p>
+<p>
+The code is a straightforward translation of the recurrence relations:
+</p>
+<pre>
+q)pfts1:{[pxs] pxs-min pxs} / same as above, now as a bound function
+q)pfts2:{[pxs] pxs+maxs (maxs pfts1[pxs]) - pxs}
+q)pftsk:{[k;pxs] {[pxs;pftsl] pxs + maxs (maxs pftsl) - pxs}[pxs]/[k;pxs-pxs]}
+q)
+q)max pftsk[128;pxs] / example invocation
+2560f
+</pre>
+<p>
+Notice how succinct the code is. As an exercise, write out the step-by-step description of what the q code does (hint: learn about
+<a href="https://code.kx.com/q4m3/6_Functions/#676-over-for-accumulation">over</a>).
+</p>
+<p>
+A final note on complexity. It is plain to see that each iteration loops through the vector of \(n\) elements between 1 and 4n times, depending on whether the values are computed incrementally (for the factor of \(n\)) and whether the iteration through the elements is fused (for the 4 operations).
+</p>
+<p>
+Here are timings on my machine (in millis) as \(k\) increases:
+</p>
+<pre>
+q)\t max pftsk[1;pxs]
+155
+q)\t max pftsk[10;pxs]
+1251
+q)\t max pftsk[16;pxs]
+1971
+q)\t max pftsk[32;pxs]
+3924
+q)\t max pftsk[64;pxs]
+7724
+q)\t max pftsk[128;pxs]
+15673
+</pre>
+<p>
+indicating the complexity is linear in \(k\).
+</p>
+<p>
+Here are timings on machine for fixed \(k\) as \(n\) increases:
+</p>
+<pre>
+q)\t max pftsk[128;90.0+(1000?2001)%100]
+3
+q)\t max pftsk[128;90.0+(10000?2001)%100]
+25
+q)\t max pftsk[128;90.0+(100000?2001)%100]
+156
+q)\t max pftsk[128;90.0+(1000000?2001)%100]
+1567
+q)\t max pftsk[128;90.0+(10000000?2001)%100]
+16090
+q)\t max pftsk[128;90.0+(100000000?2001)%100]
+'wsfull
+m 0 1073745920
+</pre>
+<p>
+The memory overflow occurs because I am using the (free) 32-bit version of q.
+In any event, we can see the performance is more-or-less linear in \(n\) as well.
+</p>
 
 <h2>How to Rock the Stage</h2>
 
 <p>
 Back at Microsoft, I went to a seminar (they call them "courses") on the topic of public speaking,
 taught by then distinguished engineer / tech evangelist <a href="https://www.docjamesw.com/">James Whittaker</a>.
-In my experience, he was a pretty good speaker and knew how to work an audience. (TODO footnote: on that day, fresh hires and folks experiencing a mid-life/career crisis.)
-So good that I was originally planning to transcribe notes from that seminar, but instead ended up watching another <a href="https://www.youtube.com/watch?v=uKtMwmWv6Q0">talk on public speaking</a> he gave a year earlier with <a href="https://www.medickinson.com/">Michelle Dickinson</a>
+In my experience, he was a pretty good speaker and knew how to work an audience, (TODO footnote: on that day, fresh hires and folks experiencing a mid-life/career crisis.)
+So well that I was originally planning to transcribe notes from that seminar, but instead ended up watching another <a href="https://www.youtube.com/watch?v=uKtMwmWv6Q0">talk on public speaking</a> he gave a year earlier with <a href="https://www.medickinson.com/">Michelle Dickinson</a>
 
 Notes from the latter:
 </p>
@@ -71,7 +216,7 @@ Notes from the latter:
 			<li>repeat the talk in bed</li>
 			<li>practice the talk under increased pressure:</li>
 			<ul>
-				<li>tell the talk while naked in front of mirror</li>
+				<li>tell the talk while naked in front of the mirror</li>
 				<li>tell the talk to strangers</li>
 			</ul>
 		</ul>
@@ -127,6 +272,19 @@ He kind of get's away with being an ass in a way where calling him out makes me 
 <h2>Squatting Technique</h2>
 
 <p>
+<b>UPDATE</b> (2020/04/01): Since going to a gym is currently ill-advised and I do not
+have weights at home, I have been practicing technique using body weight. In
+order to get the intensity up, I have been doing Arithmetic Progression Squats
+(APS), which are more commonly known as 
+<a href="https://www.menshealth.com/fitness/a19546566/death-by-air-squat-workout/">
+    "death by air squat"
+</a>. A nice feature of this workout is that the first few sets give time to warm up and
+focus on perfecting technique. Also, the load on individual reps is low enough that
+you can sense where you are over-underutilizing a muscle group before an injury
+is imminent. I have not tried geometric progressions.
+</p>
+
+<p>
 A friend of mine told me I was spending too much time learning how to squat rather than just doing it. They are probably right.
 </p>
 
@@ -163,7 +321,7 @@ Unfortunately, I'd picked up the excellent
 	<li>take only one step back from the rack</li>
 </ul>
 
-This is an incomplete summary of the 64 pages(!) devoted to the squat. Which if these did you find intuitive? Which were surprising?
+This is an incomplete summary of the 64 pages(!) devoted to the squat. Which of these did you find intuitive? Which were surprising?
 
 <h2>Sending Shame Emails When Gaming</h2>
 
@@ -211,7 +369,7 @@ Mar 15 16:16:57 daedalus-arch sendEmail[56559]: ERROR => ERROR => SMTP-AUTH: Aut
 <p>
 So putting in my actual password (you didn't think it was that bad, did you?) didn't work.
 I enabled IMAP in <a href="https://mail.google.com/mail/u/0/#settings/fwdandpop">gmail's settings</a>.
-Stack Overflow stopped giving answers, so I went to <a href="https://support.google.com/accounts/answer/185833?hl=en">Google's password help</a> where I was reminded that I have 2-Factor authentication enabled.
+Stack Overflow stopped giving answers, so I continued searching and found <a href="https://support.google.com/accounts/answer/185833?hl=en">Google's password help</a> where I was reminded that I have 2-Factor authentication enabled.
 So I needed to make an <a href="https://myaccount.google.com/apppasswords">app password</a>.
 I chose a Windows password for mail because, well, that's what we're doing.
 Finally, I used the app password, and now I can send an email to myself (or my brother!).
