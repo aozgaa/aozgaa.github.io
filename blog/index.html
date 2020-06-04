@@ -32,89 +32,155 @@ This is a typical phone interview level problem for software positions.
 </p>
 <p>
 A slightly more advanced question is to ask for optimal execution with up to two,
-three, or more non-overlapping buys and sells. Solutions, including the special case of two buys, can easily be found be found
+three, or more non-overlapping buys and sells. Solutions, including the special case of two buys, can be found
 <a
 href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+at+most+twice&t=ffab&ia=web">online</a>.
+I will be using <a href="https://www.geeksforgeeks.org/maximum-profit-by-buying-and-selling-a-share-at-most-k-times/">this C++ implementation</a>
+as a baseline.
 </p>
 <p>
-I'd like to consider what an implementation in q/kdb, missing from the online
-search results, would look like.
-</p>
-<p>
-In the case of 1 buy and sell, Borror offers the following koan:
-</p>
-<pre>
-q)n:10000000            / number of trade price ticks
-q)pxs:90.0+(n?2001)%100 / initialize trades with uniform distribution [90.0,110.0]
-q)max pxs-mins pxs      / fold max over a vector of incrementally best trades
-</pre>
-<p>
-The precedence order in k is right-to-left,so let's go step by step:
+I'd like to consider what an implementation in q/kdb, missing from online
+search results, looks like. In particular, compared to a typical C implementation, we'll see that the Q implementation:
 <ol>
-    <li> Take a vector of prices. </li>
-    <li> Build a vector of the minimum price up to the current index</li>
-    <li> Subtract this vector from the price at the current index, creating a vector of optimal trades ending at the current index</li>
-    <li> Take the most profitable trade from the list</li>
+	<li>is almost an exact translation of the recurrence relation,</li>
+	<li>has no indexing, so no risk of off-by-one errors,</li>
+	<li>reveals that the dynamic programming "matrix" of intermediate results can actually be a column,</li>
+	<li>computes all intermediate values incrementally by default,</li>
+	<li>runs as fast as a C implementation with the same optimizations.</li>
 </ol>
 </p>
+<h3>Warming up: 1 Buy and Sell</h3>
 <p>
-Let \(OE_k(P)\) denote a vector of the optimal optimal execution with \(k\) trades, given prices \(P\).
-The entry \(OE_k(P)_i\) is the optimal result for a trade that sells the last trade at time \(i\).
+Let's start with the case of one buy and sell. A complete trade needs to buy at some time, and sell at some (possibly later) time.
+We can find the best trade by finding the most profitable trade for each sell time, then take the profit of the most profitable sell time --
+working "backwards" from a sell time will generalize nicely to multiple trades.
+We can find the most profitable trade for each sell time by iterating over buy
+times at or before the sell time and maximizing the difference between buy and sell.
 </p>
 <p>
-We can see a straightforward mapping between the implementation and the following recurrence relation:
+We can describe this idea in mathematical notation.
+Let \(P = (p_0,p_1,...,p_n)\) be the vector of prices at each tick.
+We want to compute the maximum profit \(MP_1(P)\) for the trading period.
+Let \(OE_1(P)\) be the vector of maximal profits, indexed by sell time (the subscripts \(1\) are just suggestive placeholders for now).
+Then \(OE_1(P)_i\) is the maximum profit when selling at time \(i\).
 </p>
+<p>
+The relationships described above translate to these equations:
 $$
 \begin{aligned}
 OE_1(P)_i
 &= \max_{0 \leq j \leq i} \left\{ p_i - p_j \right\} \\
 &= p_i - \min_{0 \leq j \leq i} \left\{ p_j \right\} \\
+MP_1(P)
+&= \max_{0 \leq i \leq n} OE_1(P)_i \\
+&= \max_{0 \leq i \leq n} \left\{ p_i - \min_{0 \leq j \leq i} \left\{ p_j \right\} \right\} \\
 \end{aligned}
 $$
-For two trades, we want to pick an sale time \(j\), lock in the profit of the most profitable trade before that point,
-and then add in the most profitable trade starting at the pivot. A recurrence expression is
+</p>
+<p>
+Here is Borror's implementation in q:
+</p>
+<pre>
+q)max pxs-mins pxs
+</pre>
+<p>
+where <tt>pxs</tt> is the vector of prices (initialization/runner code further below).
+Notice that in q the operator precedence is right-to-left, so there are no braces/parentheses.
+Moreover, the operator <tt>mins</tt> creates a vector whose \(i\)'th entry is \(min_{1\leq j \leq i} \{p_i\}\),
+so we do not need to write any loop indices.
+</p>
+<h3>Double or Nothing: 2 Buy's and Sell's</h3>
+<p>
+For two trades, let's reuse the logic for optimal single trades.
+We are going to find the most profitable pair of trades by iterating over the last sell time, then take the profit of the best sell time.
+For each final sale time, the most profitable pair of trades is obtained by iterating over buy time at or before the sell time
+and maximizing the difference between buy and sell <em>plus</em> the most profitable trade that ends at or before the buy time.
+</p>
+<p>
+Extending our earlier notation, let \(MP_2(P)\) be the maximium profit realizable with up to 2 trades
+and \(OE_2(P)\) the vector of maximum profits for 2 trades indexed by last sell time. Then,
+</p>
 $$
 \begin{aligned}
 OE_2(P)_i
-&= \max_{0\leq j \leq i} \left\{ p_i - p_j + \max_{0 \leq l \leq j}OE_1(P)_l \right\} \\
-&= p_i + \max_{0\leq j \leq i} \left\{ \max_{0 \leq l \leq j} OE_1(P)_l\ - p_j \right\}
+&= \max_{0 \leq l \leq k \leq j \leq i} \left\{ p_i - p_j + p_k - p_l \right\} \\
+&= p_i + \max_{0 \leq l \leq k \leq j \leq i} \left\{ - p_j + p_k - p_l \right\} \\
+&= p_i + \max_{0 \leq k \leq j \leq i} \left\{ - p_j + OE_1(P)_k \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - p_j + \max_{0 \leq k \leq j}OE_1(P)_k \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - \left(p_j - \max_{0 \leq k \leq j}OE_1(P)_k \right) \right\}
+& \text{written with right-to-left precedence} \\
+&= p_i - \min_{0\leq j \leq i} \left\{p_j - \max_{0 \leq k \leq j}OE_1(P)_k \right\}
+& \text{removing a negation} \\
+MP_2(P)
+&= \max_{0 \leq i \leq n} \left\{ OE_2(P)_i \right\}
 \end{aligned}
 $$
-Perhaps the notation is suggestive to enough to show where this is going:
+Tidying up our previous q solution by wrapping in a function definition, we get
+<pre>
+q)oe1:{[pxs] pxs-min pxs}
+q)oe2:{[pxs] pxs - mins pxs - maxs oe1[pxs]}
+q)mp2:{[pxs] max oe2[pxs]}
+</pre>
+<p>
+Notice again there are no indices and no braces, save for the optional square brackets for invoking <tt>oe1</tt>.
+(Exercise: rewrite the implementation to look like the fourth line. Is it more readable? Are there any tradeoffs performance-wise?).
+</p>
+<h3>To Infinity and Beyond: the General Case</h3>
+<p>
+If we replace all instances of \(1\) by \(m\) and all instances of 2 by \(m + 1\), then we get a recurrence relation descriibing the maximum profit for \(m + 1\) buy/sell pairs.
+(Exercise: write out the recurrnce "in plain English" as above).
+</p>
+<p>
+Let \(MP_{m + 1}(P)\) be the maximium profit realizable with up to \(m + 1\) trades
+and \(OE_{m + 1}(P)\) the vector of maximum profits for \(m + 1\) trades indexed by last sell time. Then
+</p>
 $$
 \begin{aligned}
-OE_{k+1}(P)_i
-&= \max_{0\leq j \leq i} \left\{ p_i - p_j + \max_{0 \leq l \leq j}OE_k(P)_l \right\} \\
-&= p_i + \max_{0\leq j \leq i} \left\{ \max_{0 \leq l \leq j} OE_k(P)_l\ - p_j \right\} \\
 OE_0(P)_i &= 0 \\
-OE_k(P)_0 &= 0.
+OE_{m+1}(P)_i
+&= \max_{0 \leq i_{0} \leq i_{1} \leq \ldots \leq \ldots \leq i_{2m + 1} \leq i}
+	\left\{ p_i - p_{i_{2m+1}} + p_{i_{2m}} - \cdots + p_{i_1} - p_{i_0} \right\} \\
+&= p_i + \max_{0 \leq i_{0} \leq i_{1} \leq \ldots \leq \ldots \leq i_{2m + 1} \leq i}
+	\left\{ - p_{i_{2m+1}} + p_{i_{2m}} - \cdots + p_{i_1} - p_{i_0} \right\} \\
+&= p_i + \max_{0 \leq i_{2m + 1} \leq i}
+	\left\{ - p_{i_{2m+1}} + 
+	\max_{0 \leq i_{0} \leq i_{1} \leq \ldots \leq \ldots \leq i_{2m + 1}} \left\{ p_{i_{2m}} - p_{i_{2m-1}} + \cdots + p_{i_1} - p_{i_0} \right\} \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - p_j + \max_{0 \leq k \leq j}OE_m(P)_k \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - \left(p_j - \max_{0 \leq k \leq j}OE_m(P)_k \right) \right\}
+& \text{written with right-to-left precedence} \\
+&= p_i - \min_{0\leq j \leq i} \left\{p_j - \max_{0 \leq k \leq j}OE_m(P)_k \right\}
+& \text{removing a negation} \\
+MP_{m+1}(P)
+&= \max_{0 \leq i \leq n} \left\{ OE_{m+1}(P)_i \right\} \\
 \end{aligned}
 $$
 <p>
-Do a sanity check that the recurrence relation holds for \(OE_1(P)_i\).
+(Exercise: do a sanity check that the recurrence relation coincides with what we wrote for \(OE_1(P)_i\)).
 </p>
 <p>
 The code is a straightforward translation of the recurrence relations:
 </p>
 <pre>
-q)pfts1:{[pxs] pxs-min pxs} / same as above, now as a bound function
-q)pfts2:{[pxs] pxs+maxs (maxs pfts1[pxs]) - pxs}
-q)pftsk:{[k;pxs] {[pxs;pftsl] pxs + maxs (maxs pftsl) - pxs}[pxs]/[k;pxs-pxs]}
-q)
-q)max pftsk[128;pxs] / example invocation
-2560f
+q)oe:{[m;pxs] {[pxs;pftsk] pxs - mins pxs - maxs[pftsk]}[pxs]/[m;pxs-pxs]}
+q)mp:{[m;pxs] max oe[m;pxs]}
 </pre>
 <p>
-Notice how succinct the code is. As an exercise, write out the step-by-step description of what the q code does (hint: learn about
-<a href="https://code.kx.com/q4m3/6_Functions/#676-over-for-accumulation">over</a>).
+
+Notice how succinct the code is.
+As an exercise, write out a step-by-step description of what the q code does
+(hint: to begin, notice the <tt>pxs-pxs</tt> is a vector of 0's.
+Also, read the description of the function <a href="https://code.kx.com/q4m3/6_Functions/#676-over-for-accumulation">over (/)</a>).
 </p>
+<h3>Analyzing Performance</h3>
 <p>
-A final note on complexity. It is plain to see that each iteration loops through the vector of \(n\) elements between 1 and 4n times, depending on whether the values are computed incrementally (for the factor of \(n\)) and whether the iteration through the elements is fused (for the 4 operations).
+In the definition of <tt>oe</tt>, each iteration of <tt>/</tt> loops through the vector of \(n\) elements between 1 and 4n times, depending on whether the values are computed incrementally (for the factor of \(n\)) and whether the iteration through the elements is fused (for the 4 operations).
 </p>
 <p>
 Here are timings on my machine (in millis) as \(k\) increases:
 </p>
 <pre>
+q)n:10000000            / initialize number of trade price ticks
+q)pxs:90.0+(n?2001)%100 / initialize trades with uniform distribution [90.0,110.0]
 q)\t max pftsk[1;pxs]
 155
 q)\t max pftsk[10;pxs]
