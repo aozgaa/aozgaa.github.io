@@ -44,10 +44,10 @@ search results, looks like. In particular, compared to a typical C implementatio
 <ol>
 	<li>is almost an exact translation of the recurrence relation,</li>
 	<li>has no indexing, so no risk of off-by-one errors,</li>
-	<li>reveals that the dynamic programming "matrix" of intermediate results can actually be a column,</li>
-	<li>computes all intermediate values incrementally by default,</li>
-	<li>runs as fast as a C implementation with the same optimizations.</li>
+	<li>reveals that the dynamic programming "matrix" of intermediate results can actually be a column, and</li>
+	<li>computes all intermediate values incrementally by default.</li>
 </ol>
+We'll also do a wall-clock evaluation to see how the performance compares between implementations.
 </p>
 <h3>Warming up: 1 Buy and Sell</h3>
 <p>
@@ -165,34 +165,144 @@ q)oe:{[m;pxs] {[pxs;pftsk] pxs - mins pxs - maxs[pftsk]}[pxs]/[m;pxs-pxs]}
 q)mp:{[m;pxs] max oe[m;pxs]}
 </pre>
 <p>
-
 Notice how succinct the code is.
-As an exercise, write out a step-by-step description of what the q code does
+Another interesting aspect of this implementation is that computing the \(k+1\)'th column -- each iteration of the accumulation -- only uses <tt>pxs</tt> and <tt>pftsk</tt>, which of size order \(n\), not \(nk\) like the traditional dynamic programming matrix.
+This already suggests an improvement over the space requirements of a typical C language dynamic programming algorthm such as that described in Steven Skiena's <i>Programming Challenges</i>.
+Note that we would effectively need to use the same amount of memory as a matrix if we also wanted to reconstruct the set of trades that maximize profit.
+
+As an exercise, write out a left-to-right description of what the q code does,
+analogous to the "plain English" descriptions above.
 (hint: to begin, notice the <tt>pxs-pxs</tt> is a vector of 0's.
-Also, read the description of the function <a href="https://code.kx.com/q4m3/6_Functions/#676-over-for-accumulation">over (/)</a>).
+Also, read the description of the function
+<a href="https://code.kx.com/q4m3/6_Functions/#676-over-for-accumulation">over (/)</a>).
 </p>
-<h3>Analyzing Performance</h3>
+<h3>C Implementations</h3>
 <p>
-In the definition of <tt>oe</tt>, each iteration of <tt>/</tt> loops through the vector of \(n\) elements between 1 and 4n times, depending on whether the values are computed incrementally (for the factor of \(n\)) and whether the iteration through the elements is fused (for the 4 operations).
+Here are 3 C implementations in increasing order performance and complexity:
+</p>
+<p>
+1)This implementation finds the best trade by naively recursing over previous subcases.
+The runtime is \(O(N^2K)\).
+<pre>
+#include&lt;stdio.h>
+#include&lt;stdlib.h>
+#include&lt;math.h>
+
+int main(int argc, char **argv) {
+    int N = atoi(argv[1]);
+    int K = atoi(argv[2]);
+    float *pxs = calloc(N, sizeof(pxs[0]));
+    for (int i = 0; i &lt; N; ++i) {
+        pxs[i] = (9000 + (int)(drand48() * 2001)) / 100.0f;
+    }
+
+    float *bts = calloc(N*(K+1), sizeof(pxs[0])); // best trades
+    for (int k = 1; k &lt; K + 1; ++k) {
+        for (int n = 1; n &lt; N; ++n) {
+            float bt = bts[k*N + n - 1];
+            for (int nn = 0; nn &lt; n; ++nn) {
+               bt = fmax(bt, pxs[n] - pxs[nn] + bts[(k - 1)*N + nn]);
+            }
+            bts[k*N + n] = bt;
+        }
+    }
+    printf("%f\n", bts[N*(K + 1) - 1]);
+}
+</pre>
+</p>
+<p>
+2) If we observe that we can compute the best time to enter incrementally (as in the q solutions), we can improve the performance substantially, within striking distance of the q solution:
+<pre>
+#include&lt;stdio.h>
+#include&lt;stdlib.h>
+#include&lt;math.h>
+
+int main(int argc, char **argv) {
+    int N = atoi(argv[1]);
+    int K = atoi(argv[2]);
+    float *pxs = calloc(N, sizeof(pxs[0]));
+    for (int i = 0; i &lt; N; ++i) {
+        pxs[i] = (9000 + (int)(drand48() * 2001)) / 100.0f;
+    }
+
+    float *bts = calloc(N*(K+1), sizeof(pxs[0])); // best trades
+    for (int k = 1; k &lt; K + 1; ++k) {
+        float be = -pxs[0]; // best entry into the market
+        for (int n = 1; n &lt; N; ++n) {
+            bts[k*N + n] = fmax(bts[k*N + n - 1], pxs[n] + be);
+            be = fmax(be, bts[(k - 1)*N + n] - pxs[n]);
+        }
+    }
+    printf("%f\n", bts[N*(K + 1) - 1]);
+}
+</pre>
+</p>
+<p>
+3) Finally, if we replace the matrix of best columns with 2 columns (for the previous and current best trades), we can improve the performance still further:
+<pre>
+#include&lt;stdio.h>
+#include&lt;stdlib.h>
+#include&lt;math.h>
+
+int main(int argc, char **argv) {
+    int N = atoi(argv[1]);
+    int K = atoi(argv[2]);
+    float *pxs = calloc(N, sizeof(pxs[0]));
+    for (int i = 0; i &lt; N; ++i) {
+        pxs[i] = (9000 + (int)(drand48() * 2001)) / 100.0f;
+    }
+
+    float *btsp = calloc(N, sizeof(btsp[0])); // best trades previous
+    float *btsc = calloc(N, sizeof(btsc[0])); // best trades current
+    for (int k = 0; k &lt; K; ++k) {
+        float be = -pxs[0]; // best entry into the market
+        for (int n = 1; n &lt; N; ++n) {
+            btsc[n] = fmax(btsc[n - 1], pxs[n] + be);
+            be = fmax(be, btsp[n] - pxs[n]);
+        }
+        float *tmp = btsp;
+        btsp = btsc;
+        btsc = tmp; // garbage data now
+    }
+    printf("%f\n", btsp[N - 1]);
+}
+</pre>
+</p>
+<p>
+How much faster can you go?
+</p>
+
+<h3>Wall-Clock Performance</h3>
+<p>
+In q, the execution of expressions is eager in right-to-left order.
+This implies that there are no more than 4 iterations through vectors of length \(n\) for each iteration of the accumulation.
+So, the complexity is bounded by \(O(nk)\).
+</p>
+<p>
+I am running these tests using the 64bit version of q. The 32 bit version was substantially slower -- perhaps compiler flags contributed?
 </p>
 <p>
 Here are timings on my machine (in millis) as \(k\) increases:
 </p>
 <pre>
-q)n:10000000            / initialize number of trade price ticks
-q)pxs:90.0+(n?2001)%100 / initialize trades with uniform distribution [90.0,110.0]
-q)\t max pftsk[1;pxs]
-155
-q)\t max pftsk[10;pxs]
-1251
-q)\t max pftsk[16;pxs]
-1971
-q)\t max pftsk[32;pxs]
-3924
-q)\t max pftsk[64;pxs]
-7724
-q)\t max pftsk[128;pxs]
-15673
+q)n:10000000            / init number of trade price ticks
+q)pxs:90.0+(n?2001)%100 / init trades with uniform distribution [90.0,110.0]
+q)\t oe[1;pxs]
+234
+q)\t oe[2;pxs]
+315
+q)\t oe[4;pxs]
+582
+q)\t oe[8;pxs]
+1091
+q)\t oe[16;pxs]
+2156
+q)\t oe[32;pxs]
+4288
+q)\t oe[64;pxs]
+8502
+q)\t oe[128;pxs]
+17027
 </pre>
 <p>
 indicating the complexity is linear in \(k\).
@@ -201,23 +311,81 @@ indicating the complexity is linear in \(k\).
 Here are timings on machine for fixed \(k\) as \(n\) increases:
 </p>
 <pre>
-q)\t max pftsk[128;90.0+(1000?2001)%100]
-3
-q)\t max pftsk[128;90.0+(10000?2001)%100]
-25
-q)\t max pftsk[128;90.0+(100000?2001)%100]
-156
-q)\t max pftsk[128;90.0+(1000000?2001)%100]
-1567
-q)\t max pftsk[128;90.0+(10000000?2001)%100]
-16090
-q)\t max pftsk[128;90.0+(100000000?2001)%100]
-'wsfull
-m 0 1073745920
+q)\t oe[64;90.0+(1000000?2001)%100]
+907
+q)\t oe[64;90.0+(2000000?2001)%100]
+1727
+q)\t oe[64;90.0+(4000000?2001)%100]
+3370
+q)\t oe[64;90.0+(8000000?2001)%100]
+6726
+q)\t oe[64;90.0+(16000000?2001)%100]
+14175
+q)\t oe[64;90.0+(32000000?2001)%100]
+28720
 </pre>
 <p>
-The memory overflow occurs because I am using the (free) 32-bit version of q.
-In any event, we can see the performance is more-or-less linear in \(n\) as well.
+The running time also increases more or less linearly in \(n\).
+As an aside, the last few test cases overflow the 32 bit version of q.
+</p>
+<p>
+The first C implementation isn't in the right league (notice the missing 0):
+<pre>
+$ gcc mp.c -o mp -lm -O3 -march=native -funroll-loops
+$ /usr/bin/time -f %E ./mp 100000 1
+20.000000
+0:12.72
+</pre>
+<p>
+Now comparing to the second C implementation, we get these timings:
+<pre>
+$ gcc mp2.c -o mp -lm -O3 -march=native -funroll-loops
+$ /usr/bin/time -f %E ./mp 1000000 64
+1280.000000
+0:00.42
+$ /usr/bin/time -f %E ./mp 2000000 64
+1280.000000
+0:00.82
+$ /usr/bin/time -f %E ./mp 4000000 64
+1280.000000
+0:01.61
+$ /usr/bin/time -f %E ./mp 8000000 64
+1280.000000
+0:03.24
+$ /usr/bin/time -f %E ./mp 16000000 64
+1280.000000
+0:06.92
+$ /usr/bin/time -f %E ./mp 32000000 64
+1280.000000
+0:14.41
+</pre>
+which is already 2x faster than the q implementation.
+</p>
+
+<p>
+The final C implementation was a huge improvement:
+<pre>
+$ gcc mp3.c -o mp -lm -O3 -march=native -funroll-loops
+$ /usr/bin/time -f %E ./mp 1000000 64
+1280.000000
+0:00.37
+$ /usr/bin/time -f %E ./mp 2000000 64
+1280.000000
+0:00.71
+$ /usr/bin/time -f %E ./mp 4000000 64
+1280.000000
+0:01.39
+$ /usr/bin/time -f %E ./mp 8000000 64
+1280.000000
+0:02.78
+$ /usr/bin/time -f %E ./mp 16000000 64
+1280.000000
+0:05.50
+$ /usr/bin/time -f %E ./mp 32000000 64
+1280.000000
+0:11.01
+</pre>
+which is to say this C implementation is, on my machine, almost 3x faster than what I came up with in q.
 </p>
 
 <h2>How to Rock the Stage</h2>
