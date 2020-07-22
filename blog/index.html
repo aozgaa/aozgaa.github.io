@@ -13,36 +13,48 @@
 <!-- To automatically render math in text elements, include the auto-render extension: -->
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
 
+<style>
+	body {
+	  max-width: 900px;
+	  margin: left;
+	}
+</style>
 </head>
 
 <body>
 
 <h2>Implementing a Dynamic Programming algorithm in Q</h2>
 <p>
-Curious about array-based programming, I recently started reading the online
-book <a href="https://code.kx.com/q4m3/">Q For Mortals</a> by Jeffry Borror.
-
-In an intrductory section, Borror covers an example of post-hoc optimal
-execution in trading. The task is to pick the best time to buy then sell stock
+Array-based programming languages are often touted as providing superior performance and brief, "mind-expanding" program implementations.
+While examples of elegant programming koans exist, direct comparisons between implementations in array-based languages and imperative languages are missing.
+Some examples are needed to make a fair comparison and move the conversation forward.
+</p>
+<p>
+I came across a good candidate problem while reading the ebook <a href="https://code.kx.com/q4m3/">Q For Mortals</a> by Jeffry Borror.
+In an introductory section, Borror covers an example of post-hoc optimal execution in trading.
+The task is, given a timeseries of stock prices (no bid/ask spread), to pick the best time to buy then sell stock
 to realize a maximum profit in a trading period, with up to one buy and sell allowed
 (equivalently, we can require that exactly one trade occurs and you can buy/sell at the same time step),
 assuming no market impact.
-
-This is a typical phone interview level problem for software positions.
 </p>
 <p>
-A slightly more advanced question is to ask for optimal execution with up to two,
-three, or more non-overlapping buys and sells. Solutions, including the special case of two buys, can be found
-<a
-href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+at+most+twice&t=ffab&ia=web">online</a>.
-I will be using <a href="https://www.geeksforgeeks.org/maximum-profit-by-buying-and-selling-a-share-at-most-k-times/">this C++ implementation</a>
-as a baseline.
+This is a typical phone-interview-level problem for software positions.
 </p>
 <p>
-I'd like to consider what an implementation in q/kdb, missing from online
-search results, looks like. In particular, compared to a typical C implementation, we'll see that the Q implementation:
+A more advanced question is to ask for optimal execution with up to two,
+three, or more non-overlapping buys and sells.
+</p>
+<p>
+In imperative languages, solutions online abound for the case of
+<a href="https://java2blog.com/stock-buy-sell-to-maximize-profit/">one buy</a>,
+<a href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+at+most+twice&t=ffab&ia=web">up to two buys</a>,
+and <a href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+k+times&t=ffab&ia=web">up to k buys</a>.
+</p>
+<p>
+I'd like to consider what an implementation in q/kdb looks like.
+Compared to a typical C implementation, we'll see that the Q implementation:
 <ol>
-	<li>is almost an exact translation of the recurrence relation,</li>
+	<li>is an almost exact translation of the recurrence relation,</li>
 	<li>has no indexing, so no risk of off-by-one errors,</li>
 	<li>reveals that the dynamic programming "matrix" of intermediate results can actually be a column, and</li>
 	<li>computes all intermediate values incrementally by default.</li>
