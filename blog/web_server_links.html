@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+
+<title>Blog&nbsp;|&nbsp;Arthur Ozga</title>
+
+<style>
+	body {
+	  max-width: 900px;
+	  margin: left;
+	}
+</style>
+</head>
+
+<body>
+
+<h1>Resources for Building a Web Server</h1>
+
+<strong>Exercise</strong>: pick a use-case (eg: static file server, streaming file server, database web server)
+and implement the bare minimum to be able to interact with it using standard tools (eg: curl).
+<br>
+This means probably only supporting ipv4, HTTP/1.1 (1.2 is relatively complicated), and omitting most of the contents of the corresponding specs.
+<br>
+I am working on hosting my personal site on such a web server instead of github.io.
+<br><br>
+
+<ul>
+<li><a href="https://beej.us/guide/bgnet/html/single/bgnet.html">Beej's Guide to Network Programming</a></li>
+<li><a href="https://tools.ietf.org/html/rfc2616">rfc2616 -- http/1.1</a></li>
+<li><a href="https://tools.ietf.org/html/rfc7231">rfc7231 -- http semantics and content</a></li>
+<li><a href="http://www.kegel.com/c10k.html">The C10K Problem</a> (history and context)</li>
+<li><a href="https://lwn.net/Articles/726917/">zero-copy networking</a></li>
+<li><code>man man</code></li>
+<li><code>man write</code></li>
+<li><code>man epoll</code></li>
+<li><code>man splice</code></li>
+</ul>
+
+</body>
+
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+
+<title>q Impl&nbsp;|&nbsp;Arthur Ozga</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css" integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous">
+
+<!-- The loading of KaTeX is deferred to speed up page rendering -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js" integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz" crossorigin="anonymous"></script>
+
+<!-- To automatically render math in text elements, include the auto-render extension: -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+
+<style>
+	body {
+	  max-width: 900px;
+	  margin: left;
+	}
+</style>
+</head>
+
+<body>
+
+<h1>Implementing a Dynamic Programming algorithm in Q</h1>
+<p>
+Array-based programming languages are often touted as providing superior performance and brief, "mind-expanding" program implementations.
+While examples of elegant programming koans exist, direct comparisons between implementations in array-based languages and imperative languages are missing.
+Some examples are needed to make a fair comparison and move the conversation forward.
+</p>
+<p>
+I came across a good candidate problem while reading the ebook <a href="https://code.kx.com/q4m3/">Q For Mortals</a> by Jeffry Borror.
+In an introductory section, Borror covers an example of post-hoc optimal execution in trading.
+The task is, given a timeseries of stock prices (no bid/ask spread), to pick the best time to buy then sell stock
+to realize a maximum profit in a trading period, with up to one buy and sell allowed
+(equivalently, we can require that exactly one trade occurs and you can buy/sell at the same time step),
+assuming no market impact.
+</p>
+<p>
+This is a typical phone-interview-level problem for software positions.
+</p>
+<p>
+A more advanced question is to ask for optimal execution with up to two,
+three, or more non-overlapping buys and sells.
+</p>
+<p>
+In imperative languages, solutions online abound for the case of
+<a href="https://java2blog.com/stock-buy-sell-to-maximize-profit/">one buy</a>,
+<a href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+at+most+twice&t=ffab&ia=web">up to two buys</a>,
+and <a href="https://duckduckgo.com/?q=maximum+profit+buy+and+sell+k+times&t=ffab&ia=web">up to k buys</a>.
+</p>
+<p>
+I'd like to consider what an implementation in q/kdb looks like.
+Compared to a typical C implementation, we'll see that the Q implementation:
+<ol>
+	<li>is an almost exact translation of the recurrence relation,</li>
+	<li>has no indexing, so no risk of off-by-one errors,</li>
+	<li>reveals that the dynamic programming "matrix" of intermediate results can actually be a column, and</li>
+	<li>computes all intermediate values incrementally by default.</li>
+</ol>
+We'll also do a wall-clock evaluation to see how the performance compares between implementations.
+</p>
+<h2>Warming up: 1 Buy and Sell</h2>
+<p>
+Let's start with the case of one buy and sell. A complete trade needs to buy at some time, and sell at some (possibly later) time.
+We can find the best trade by finding the most profitable trade for each sell time, then take the profit of the most profitable sell time --
+working "backwards" from a sell time will generalize nicely to multiple trades.
+We can find the most profitable trade for each sell time by iterating over buy
+times at or before the sell time and maximizing the difference between buy and sell.
+</p>
+<p>
+We can describe this idea in mathematical notation.
+Let \(P = (p_0,p_1,...,p_n)\) be the vector of prices at each tick.
+We want to compute the maximum profit \(MP_1(P)\) for the trading period.
+Let \(OE_1(P)\) be the vector of maximal profits, indexed by sell time (the subscripts \(1\) are just suggestive placeholders for now).
+Then \(OE_1(P)_i\) is the maximum profit when selling at time \(i\).
+</p>
+<p>
+The relationships described above translate to these equations:
+$$
+\begin{aligned}
+OE_1(P)_i
+&= \max_{0 \leq j \leq i} \left\{ p_i - p_j \right\} \\
+&= p_i - \min_{0 \leq j \leq i} \left\{ p_j \right\} \\
+MP_1(P)
+&= \max_{0 \leq i \leq n} OE_1(P)_i \\
+&= \max_{0 \leq i \leq n} \left\{ p_i - \min_{0 \leq j \leq i} \left\{ p_j \right\} \right\} \\
+\end{aligned}
+$$
+</p>
+<p>
+Here is Borror's implementation in q:
+</p>
+<pre>
+q)max pxs-mins pxs
+</pre>
+<p>
+where <tt>pxs</tt> is the vector of prices (initialization/runner code further below).
+Notice that in q the operator precedence is right-to-left, so there are no braces/parentheses.
+Moreover, the operator <tt>mins</tt> creates a vector whose \(i\)'th entry is \(min_{1\leq j \leq i} \{p_i\}\),
+so we do not need to write any loop indices.
+</p>
+<h2>Double or Nothing: 2 Buy's and Sell's</h2>
+<p>
+For two trades, let's reuse the logic for optimal single trades.
+We are going to find the most profitable pair of trades by iterating over the last sell time, then take the profit of the best sell time.
+For each final sale time, the most profitable pair of trades is obtained by iterating over buy time at or before the sell time
+and maximizing the difference between buy and sell <em>plus</em> the most profitable trade that ends at or before the buy time.
+</p>
+<p>
+Extending our earlier notation, let \(MP_2(P)\) be the maximium profit realizable with up to 2 trades
+and \(OE_2(P)\) the vector of maximum profits for 2 trades indexed by last sell time. Then,
+</p>
+$$
+\begin{aligned}
+OE_2(P)_i
+&= \max_{0 \leq l \leq k \leq j \leq i} \left\{ p_i - p_j + p_k - p_l \right\} \\
+&= p_i + \max_{0 \leq l \leq k \leq j \leq i} \left\{ - p_j + p_k - p_l \right\} \\
+&= p_i + \max_{0 \leq k \leq j \leq i} \left\{ - p_j + OE_1(P)_k \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - p_j + \max_{0 \leq k \leq j}OE_1(P)_k \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - \left(p_j - \max_{0 \leq k \leq j}OE_1(P)_k \right) \right\}
+& \text{written with right-to-left precedence} \\
+&= p_i - \min_{0\leq j \leq i} \left\{p_j - \max_{0 \leq k \leq j}OE_1(P)_k \right\}
+& \text{removing a negation} \\
+MP_2(P)
+&= \max_{0 \leq i \leq n} \left\{ OE_2(P)_i \right\}
+\end{aligned}
+$$
+Tidying up our previous q solution by wrapping in a function definition, we get
+<pre>
+q)oe1:{[pxs] pxs-min pxs}
+q)oe2:{[pxs] pxs - mins pxs - maxs oe1[pxs]}
+q)mp2:{[pxs] max oe2[pxs]}
+</pre>
+<p>
+Notice again there are no indices and no braces, save for the optional square brackets for invoking <tt>oe1</tt>.
+(Exercise: rewrite the implementation to look like the fourth line. Is it more readable? Are there any tradeoffs performance-wise?).
+</p>
+<h2>To Infinity and Beyond: the General Case</h2>
+<p>
+If we replace all instances of \(1\) by \(m\) and all instances of 2 by \(m + 1\), then we get a recurrence relation descriibing the maximum profit for \(m + 1\) buy/sell pairs.
+(Exercise: write out the recurrnce "in plain English" as above).
+</p>
+<p>
+Let \(MP_{m + 1}(P)\) be the maximium profit realizable with up to \(m + 1\) trades
+and \(OE_{m + 1}(P)\) the vector of maximum profits for \(m + 1\) trades indexed by last sell time. Then
+</p>
+$$
+\begin{aligned}
+OE_0(P)_i &= 0 \\
+OE_{m+1}(P)_i
+&= \max_{0 \leq i_{0} \leq i_{1} \leq \ldots \leq \ldots \leq i_{2m + 1} \leq i}
+	\left\{ p_i - p_{i_{2m+1}} + p_{i_{2m}} - \cdots + p_{i_1} - p_{i_0} \right\} \\
+&= p_i + \max_{0 \leq i_{0} \leq i_{1} \leq \ldots \leq \ldots \leq i_{2m + 1} \leq i}
+	\left\{ - p_{i_{2m+1}} + p_{i_{2m}} - \cdots + p_{i_1} - p_{i_0} \right\} \\
+&= p_i + \max_{0 \leq i_{2m + 1} \leq i}
+	\left\{ - p_{i_{2m+1}} + 
+	\max_{0 \leq i_{0} \leq i_{1} \leq \ldots \leq \ldots \leq i_{2m + 1}} \left\{ p_{i_{2m}} - p_{i_{2m-1}} + \cdots + p_{i_1} - p_{i_0} \right\} \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - p_j + \max_{0 \leq k \leq j}OE_m(P)_k \right\} \\
+&= p_i + \max_{0\leq j \leq i} \left\{ - \left(p_j - \max_{0 \leq k \leq j}OE_m(P)_k \right) \right\}
+& \text{written with right-to-left precedence} \\
+&= p_i - \min_{0\leq j \leq i} \left\{p_j - \max_{0 \leq k \leq j}OE_m(P)_k \right\}
+& \text{removing a negation} \\
+MP_{m+1}(P)
+&= \max_{0 \leq i \leq n} \left\{ OE_{m+1}(P)_i \right\} \\
+\end{aligned}
+$$
+<p>
+(Exercise: do a sanity check that the recurrence relation coincides with what we wrote for \(OE_1(P)_i\)).
+</p>
+<p>
+The code is a straightforward translation of the recurrence relations:
+</p>
+<pre>
+q)oe:{[m;pxs] {[pxs;pftsk] pxs - mins pxs - maxs[pftsk]}[pxs]/[m;pxs-pxs]}
+q)mp:{[m;pxs] max oe[m;pxs]}
+</pre>
+<p>
+Notice how succinct the code is.
+Another interesting aspect of this implementation is that computing the \(k+1\)'th column -- each iteration of the accumulation -- only uses <tt>pxs</tt> and <tt>pftsk</tt>, which of size order \(n\), not \(nk\) like the traditional dynamic programming matrix.
+This already suggests an improvement over the space requirements of a typical C language dynamic programming algorthm such as that described in Steven Skiena's <i>Programming Challenges</i>.
+Note that we would effectively need to use the same amount of memory as a matrix if we also wanted to reconstruct the set of trades that maximize profit.
+
+As an exercise, write out a left-to-right description of what the q code does,
+analogous to the "plain English" descriptions above.
+(hint: to begin, notice the <tt>pxs-pxs</tt> is a vector of 0's.
+Also, read the description of the function
+<a href="https://code.kx.com/q4m3/6_Functions/#676-over-for-accumulation">over (/)</a>).
+</p>
+<h2>C Implementations</h2>
+<p>
+Here are 3 C implementations in increasing order performance and complexity:
+</p>
+<p>
+1)This implementation finds the best trade by naively recursing over previous subcases.
+The runtime is \(O(N^2K)\).
+<pre>
+#include&lt;stdio.h>
+#include&lt;stdlib.h>
+#include&lt;math.h>
+
+int main(int argc, char **argv) {
+    int N = atoi(argv[1]);
+    int K = atoi(argv[2]);
+    float *pxs = calloc(N, sizeof(pxs[0]));
+    for (int i = 0; i &lt; N; ++i) {
+        pxs[i] = (9000 + (int)(drand48() * 2001)) / 100.0f;
+    }
+
+    float *bts = calloc(N*(K+1), sizeof(pxs[0])); // best trades
+    for (int k = 1; k &lt; K + 1; ++k) {
+        for (int n = 1; n &lt; N; ++n) {
+            float bt = bts[k*N + n - 1];
+            for (int nn = 0; nn &lt; n; ++nn) {
+               bt = fmax(bt, pxs[n] - pxs[nn] + bts[(k - 1)*N + nn]);
+            }
+            bts[k*N + n] = bt;
+        }
+    }
+    printf("%f\n", bts[N*(K + 1) - 1]);
+}
+</pre>
+</p>
+<p>
+2) If we observe that we can compute the best time to enter incrementally (as in the q solutions), we can improve the performance substantially, within striking distance of the q solution:
+<pre>
+#include&lt;stdio.h>
+#include&lt;stdlib.h>
+#include&lt;math.h>
+
+int main(int argc, char **argv) {
+    int N = atoi(argv[1]);
+    int K = atoi(argv[2]);
+    float *pxs = calloc(N, sizeof(pxs[0]));
+    for (int i = 0; i &lt; N; ++i) {
+        pxs[i] = (9000 + (int)(drand48() * 2001)) / 100.0f;
+    }
+
+    float *bts = calloc(N*(K+1), sizeof(pxs[0])); // best trades
+    for (int k = 1; k &lt; K + 1; ++k) {
+        float be = -pxs[0]; // best entry into the market
+        for (int n = 1; n &lt; N; ++n) {
+            bts[k*N + n] = fmax(bts[k*N + n - 1], pxs[n] + be);
+            be = fmax(be, bts[(k - 1)*N + n] - pxs[n]);
+        }
+    }
+    printf("%f\n", bts[N*(K + 1) - 1]);
+}
+</pre>
+</p>
+<p>
+3) Finally, if we replace the matrix of best columns with 2 columns (for the previous and current best trades), we can improve the performance still further:
+<pre>
+#include&lt;stdio.h>
+#include&lt;stdlib.h>
+#include&lt;math.h>
+
+int main(int argc, char **argv) {
+    int N = atoi(argv[1]);
+    int K = atoi(argv[2]);
+    float *pxs = calloc(N, sizeof(pxs[0]));
+    for (int i = 0; i &lt; N; ++i) {
+        pxs[i] = (9000 + (int)(drand48() * 2001)) / 100.0f;
+    }
+
+    float *btsp = calloc(N, sizeof(btsp[0])); // best trades previous
+    float *btsc = calloc(N, sizeof(btsc[0])); // best trades current
+    for (int k = 0; k &lt; K; ++k) {
+        float be = -pxs[0]; // best entry into the market
+        for (int n = 1; n &lt; N; ++n) {
+            btsc[n] = fmax(btsc[n - 1], pxs[n] + be);
+            be = fmax(be, btsp[n] - pxs[n]);
+        }
+        float *tmp = btsp;
+        btsp = btsc;
+        btsc = tmp; // garbage data now
+    }
+    printf("%f\n", btsp[N - 1]);
+}
+</pre>
+</p>
+<p>
+How much faster can you go?
+</p>
+
+<h2>Wall-Clock Performance</h2>
+<p>
+In q, the execution of expressions is eager in right-to-left order.
+This implies that there are no more than 4 iterations through vectors of length \(n\) for each iteration of the accumulation.
+So, the complexity is bounded by \(O(nk)\).
+</p>
+<p>
+I am running these tests using the 64bit version of q. The 32 bit version was substantially slower -- perhaps compiler flags contributed?
+</p>
+<p>
+Here are timings on my machine (in millis) as \(k\) increases:
+</p>
+<pre>
+q)n:10000000            / init number of trade price ticks
+q)pxs:90.0+(n?2001)%100 / init trades with uniform distribution [90.0,110.0]
+q)\t oe[1;pxs]
+234
+q)\t oe[2;pxs]
+315
+q)\t oe[4;pxs]
+582
+q)\t oe[8;pxs]
+1091
+q)\t oe[16;pxs]
+2156
+q)\t oe[32;pxs]
+4288
+q)\t oe[64;pxs]
+8502
+q)\t oe[128;pxs]
+17027
+</pre>
+<p>
+indicating the complexity is linear in \(k\).
+</p>
+<p>
+Here are timings on machine for fixed \(k\) as \(n\) increases:
+</p>
+<pre>
+q)\t oe[64;90.0+(1000000?2001)%100]
+907
+q)\t oe[64;90.0+(2000000?2001)%100]
+1727
+q)\t oe[64;90.0+(4000000?2001)%100]
+3370
+q)\t oe[64;90.0+(8000000?2001)%100]
+6726
+q)\t oe[64;90.0+(16000000?2001)%100]
+14175
+q)\t oe[64;90.0+(32000000?2001)%100]
+28720
+</pre>
+<p>
+The running time also increases more or less linearly in \(n\).
+As an aside, the last few test cases overflow the 32 bit version of q.
+</p>
+<p>
+The first C implementation isn't in the right league (notice the missing 0):
+<pre>
+$ gcc mp.c -o mp -lm -O3 -march=native -funroll-loops
+$ /usr/bin/time -f %E ./mp 100000 1
+20.000000
+0:12.72
+</pre>
+<p>
+Now comparing to the second C implementation, we get these timings:
+<pre>
+$ gcc mp2.c -o mp -lm -O3 -march=native -funroll-loops
+$ /usr/bin/time -f %E ./mp 1000000 64
+1280.000000
+0:00.42
+$ /usr/bin/time -f %E ./mp 2000000 64
+1280.000000
+0:00.82
+$ /usr/bin/time -f %E ./mp 4000000 64
+1280.000000
+0:01.61
+$ /usr/bin/time -f %E ./mp 8000000 64
+1280.000000
+0:03.24
+$ /usr/bin/time -f %E ./mp 16000000 64
+1280.000000
+0:06.92
+$ /usr/bin/time -f %E ./mp 32000000 64
+1280.000000
+0:14.41
+</pre>
+which is already 2x faster than the q implementation.
+</p>
+
+<p>
+The final C implementation was a huge improvement:
+<pre>
+$ gcc mp3.c -o mp -lm -O3 -march=native -funroll-loops
+$ /usr/bin/time -f %E ./mp 1000000 64
+1280.000000
+0:00.37
+$ /usr/bin/time -f %E ./mp 2000000 64
+1280.000000
+0:00.71
+$ /usr/bin/time -f %E ./mp 4000000 64
+1280.000000
+0:01.39
+$ /usr/bin/time -f %E ./mp 8000000 64
+1280.000000
+0:02.78
+$ /usr/bin/time -f %E ./mp 16000000 64
+1280.000000
+0:05.50
+$ /usr/bin/time -f %E ./mp 32000000 64
+1280.000000
+0:11.01
+</pre>
+which is to say this C implementation is, on my machine, almost 3x faster than what I came up with in q.
+</p>
+
+</body>
+
+</html>
