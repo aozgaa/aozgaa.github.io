@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+
+  <title>LLVM From Source&nbsp;|&nbsp;Arthur Ozga</title>
+
+<style>
+	body {
+	  max-width: 900px;
+	  margin: left;
+	}
+</style>
+</head>
+
+<body>
+
+<h1>Using LLVM Built From Source</h1>
+
+<p>
+Many features of the latest revision of c++ and tooling are not available on
+stable compilers/stdlib's packaged in linux distributions (eg: debian/ubuntu).
+
+For example, modules and &lt;print&gt; are only partially implemented at the time of writing.
+
+This gates access to many such features for the curious developer.
+</p>
+
+<p>
+It's useful to get access to the latest (possibly unstable) build of a compiler
+to open up room for experimentation, both as a user and potential contributor.
+
+I have a few ergonomic goals for a compiler install:
+<ol>
+  <li>findable/usable with minimal modification</li>
+  <li>easy to build</li>
+  <li>easy to replace</li>
+  <li>easy to remove</li>
+  <li>doesn't destroy my machine/default toolchain in some way</li>
+</ol>
+</p>
+
+<p>
+The concrete linux distribution/kernel I am running is:
+<pre>
+$ lsb_release -a
+No LSB modules are available.
+Distributor ID: Ubuntu
+Description:    Ubuntu 23.10
+Release:        23.10
+Codename:       mantic
+$ uname -r
+6.5.0-15-generic
+</pre>
+</p>
+
+<p>
+LLVM in particular is a natural choice given these requirements:
+<ol>
+  <li>frequent improvements to extra tools such as clang-format, clang-tidy, clang-repl, ...</li>
+  <li>separate compiler executables (clang++) avoid some conflict with default toolchain</li>
+  <li>separate stdlib (libc++) avoids some conflicts with default toolchain</li>
+  <li>easy to overwrite/remove without affecting system/package-manager packages (see below)</li>
+</ol>
+</p>
+
+<h3>Install Location</h3>
+<p>
+The
+<a href="https://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html">Filesystem Hierarchy Standard</a>
+describes how different parts of the filesystem are managed in Unix operating
+systems.
+
+In practice, /usr/* directories are typically managed by your package
+manager (eg: apt) and /usr/local/* contain artifacts relating to locally built packages.
+</p>
+
+<p>
+On my machine, the $PATH environment variable (for executables) preferentially
+takes binaries from /usr/local/bin before /usr/bin (this is a common default -- see bash(1)).
+</p>
+
+<p>
+The same is true for libraries -- /usr/local/lib is preferred to /usr/lib in the default /etc/ld.so.conf on Ubuntu.
+
+However, the actual search procedure is based on a cache of library locations
+(to limit filesystem lookups during program startup).
+
+Much confusion can be had (with opaque link/runtime errors) if the cache is
+*not* updated. Fortunately, the cache can be reset by simply running
+<pre>sudo ldconfig</pre>
+after making changes to */lib directories. See ld.so(8) and ldconfig(8) for details.
+</p>
+
+<h2>Building LLVM</h2>
+
+<p>
+The <a href="https://llvm.org/docs/CMake.html">Building LLVM with CMake</a>
+page lists a number of options, which can take some time to grok.
+</p>
+
+<p>
+</p>
+
+<p>
+Given the constraints above, I came up with the following build.sh script which
+I run from my llvm root directory:
+<pre>
+#!/bin/bash
+
+set -euo pipefail
+
+cmake \
+  -S llvm \
+  -B build \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;libc;libcxx;libcxxabi;libunwind" \
+  -DLLVM_CCACHE_BUILD=ON \
+  -DLLVM_ENABLE_LLD=ON \
+  -DLLVM_INSTALL_UTILS=ON \
+  -DLLVM_TARGETS_TO_BUILD=X86
+
+ninja -C build            # can limit to clang,runtimes,... as desired
+sudo ninja -C install     # be sure to only run with sudo if deps are prebuilt,
+                          # otherwise build/ will have files owned by root
+</pre>
+
+A couple remarks:
+<ol>
+  <li><code>RelWithDebInfo</code> ran out of disk space on my machine after
+    using ~120GB (binaries like clang-tidy alone were 5GB)</li>
+  <li>cross-compilation is not needed, so targeting x86 alone is sufficient for my needs</li>
+  <li>the install location is /usr/local/* as per default</li>
+  <li><code>sudo ldconfig</code> should be run after the install to avoid wrong library complications</li>
+</ol>
+</p>
+
+<p>
+Now, clang/clang++ will resolve to the locally built clang and libc++ is a compiler flag away.
+</p>
+
+<p>
+As an example, here we build a small application that uses <code>std::print()</code>:
+<pre>
+$ cat main.cpp
+#include &lt;print&gt;
+
+using namespace std;
+
+int main() {
+  std::print("hello print\n");
+  return 0;
+}
+$ clang++ -stdlib=libc++ -std=c++2b main.cpp -o main
+$ ./main
+hello print
+</pre>
+</p>
+
+<h2>CMake Support</h2>
+
+<p>
+In CMake, the default compiler is gcc/g++, so the typical way to override this
+is by specifying a
+<a href="https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html">toolchain file</a>
+(some extra variables set for consistency/convenience):
+<pre>
+$ cat x86_64-pc-linux-elf.cmake
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR X86)
+set(CMAKE_C_COMPILER /usr/local/bin/clang)
+set(CMAKE_CXX_COMPILER /usr/local/bin/clang++)
+
+set(cpp23flags "-fexperimental-library -stdlib=libc++")
+set(debugflags "-O0 -glldb -fno-omit-frame-pointer -fno-inline")
+set(CMAKE_C_FLAGS_DEBUG_INIT "${cpp23flags} ${debugflags}")
+set(CMAKE_C_FLAGS_RELEASE_INIT "${cpp23flags}")
+set(CMAKE_CXX_FLAGS_DEBUG_INIT "${cpp23flags} ${debugflags}")
+set(CMAKE_CXX_FLAGS_RELEASE_INIT "${cpp23flags}")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-lc++abi -fuse-ld=lld")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-lc++abi -fuse-ld=lld")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "-lc++abi -fuse-ld=lld")
+</pre>
+The toolchain can be selected either by:
+<ol>
+  <li>
+specifying it at the commandline: <code>$ cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=x86_64-pc-linux-elf.cmake</code>
+<li>Using a 
+  <a href="https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html">CMakePresets.json</a> file
+</li>
+</ol>
+
+<h2>Appendix: Alternate Install Prefix</h2>
+
+<p>
+An alternative approach is to install the binaries and libraries in an
+alternate location, say ${HOME}/llvm-project/build/install.
+
+This approach is often valued in monorepo and enterprise build environments as
+part of a "hermetic" build system for a couple reasons:
+<ol>
+  <li>allows for easier switching between compiler builds (eg: to handle
+    conflicting build environment dependencies)</li>
+  <li>helps track the closure of build-time dependencies to aid in reproducible builds</li>
+  <li>somewhat helps avoid accidentally using the wrong compiler version</li>
+</ol>
+
+</p>
+<p>
+When installing to an alternate prefix, clang will not use the stdlib it was
+built with and that needs to be specified manually.
+</p>
+
+<p>
+For example, to compile a main.cpp using std::generator (not available in my
+system's c++ stdlibs), we could run something like
+<pre>
+$ LLVM_ROOT=${HOME}/llvm-project            # replace with actual path
+$ CLANG_INSTALL=${LLVM_ROOT}/build/install  # replace with actual path
+$ ${LLVM_ROOT}/build/bin/clang++ \
+  -nostdinc++ \
+  -nostdlib++ \
+  -isystem ${CLANG_INSTALL}/include/c++/v1 \
+  -I ${CLANG_INSTALL}/include/x86_64-unknown-linux-gnu/c++/v1 \
+  -L ${CLANG_INSTALL}/lib \
+  -Wl,-rpath,${CLANG_INSTALL}/lib \
+  -lc++ \
+  -fexperimental-library \
+  -std=c++2b \
+  main.cpp -o main -O3 )
+</pre>
+These flags could also be added to a cmake toolchain file.
+</p>
+
+<p>
+That said, this approach was cumbersome enough for me that I've preferred to
+avoid fighting Unix conventions for now and simply install to /usr/local.
+</p>
+
+</body>
+
+</html>
