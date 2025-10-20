@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+
+    <title>Procedural vs Declarative Algorithms&nbsp;|&nbsp;Arthur Ozga</title>
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css" integrity="sha384-WcoG4HRXMzYzfCgiyfrySxx90XSl2rxY5mnVY5TwtWE6KLrArNKn0T/mOgNL0Mmi" crossorigin="anonymous">
+
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.js" integrity="sha384-J+9dG2KMoiR9hqcFao0IBLwxt6zpcyN68IgwzsCSkbreXUjmNVRhPFTssqdSGjwQ" crossorigin="anonymous"></script>
+
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>
+    <style>
+body {
+  max-width: 900px;
+  margin: left;
+}
+  .footnotes {
+    list-style: none;
+    padding-left: 0;
+  }
+  .footnotes > li {
+    margin-bottom: 0.75em;
+  }
+  .footnote-backref {
+    margin-left: 0.5em;
+  }
+  .ladder-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1em;
+  }
+  .ladder-table th,
+  .ladder-table td {
+    border: 1px solid #444;
+    padding: 0.5em;
+    vertical-align: top;
+  }
+  .ladder-table th:first-child,
+  .ladder-table td:first-child {
+    white-space: nowrap;
+    width: 1%;
+  }
+  .criteria-list {
+    padding-left: 1.5em;
+  }
+  .criteria-list li {
+    margin-bottom: 0.5em;
+  }
+  .criteria-list .criteria-cont {
+    display: block;
+    margin-left: 2em;
+  }
+  #conceptual-axis-table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  #conceptual-axis-table th,
+  #conceptual-axis-table td {
+    border: 1px solid #444;
+    padding: 0.5em;
+  }
+    </style>
+  </head>
+
+  <body>
+
+    <h1>Procedural vs Declarative Abstractions</h1>
+
+    <h2>A Ladder of Abstractions</h2>
+
+    <p>
+    The successful execution of a piece of software rests upon a tower of
+    dependable abstractions; each layer, building on the previous, provides a
+    more logical, less physical platform to realize computation.
+    We have, from a bird's eye view (expanding upon <a href="#ref-1">[1]</a>):
+    </p>
+    <table class="ladder-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Topics of Concern</th>
+          <th>Abstractions Exposed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Particle Physics</td>
+          <td>Electromagnetic fields</td>
+          <td>physical interactions / differential equations</td>
+        </tr>
+        <tr>
+          <td>Materials science</td>
+          <td>Building up chemicals / objects with desirable physical properties for electronic systems</td>
+          <td>Material spec sheets for composition / manufacturing</td>
+        </tr>
+        <tr>
+          <td>Electrical engineering</td>
+          <td>Practical electronic systems</td>
+          <td>Basic electrical components (like logic gates) with known propagation delays, impedances, acceptable voltages, ...</td>
+        </tr>
+        <tr>
+          <td>Hardware engineering</td>
+          <td>CPU / peripheral designs</td>
+          <td>ISA, physical and data link layer protocols, ...</td>
+        </tr>
+        <tr>
+          <td>Operating systems</td>
+          <td>Sensibly organizing hardware into bootable machines with process-level abstractions<a href="#fn-a" id="ref-a">[a]</a></td>
+          <td>(Virtual) address space, scheduler policy, thread library, filesystem, ...</td>
+        </tr>
+        <tr>
+          <td>Software translation</td>
+          <td>Collection of work/tooling around converting "code" in high level languages into executable code</td>
+          <td>Compilers, linkers, programming language semantics, ...</td>
+        </tr>
+        <tr>
+          <td>Algorithms</td>
+          <td>Procedures operating atop these abstractions to compute</td>
+          <td>Guarantees on the data computed given suitable inputs</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+    These are only some of the basic abstractions typically used to build up programs
+    that usefully compute<a href="#fn-b" id="ref-b">[b]</a>.
+    When it comes to networking, the
+    <a href="https://en.wikipedia.org/wiki/OSI_model">OSI model</a>
+    provides a rough guide of layered abstraction to provide a separation of concerns
+    <a href="#fn-c" id="ref-c">[c]</a>.
+    </p>
+
+    <p>
+    The platform we have today is remarkable, the result of thousands of lifetimes
+    spent specializing, building, and iterating so that the combined platform may
+    evolve and improve.
+    The degree of specialization at each layer is so great that the full picture is
+    beyond the comprehension of any one person.
+    Progress comes from the interplay of individuals who only fully grasp a small
+    portion of the tower.
+    </p>
+
+    <p>
+    As we move down the ladder, the "stuff" exposed becomes less physical and
+    increasingly mental (logical) -- more psychologically in the realm of
+    <em>thoughtstuff</em>.
+    And it is here where it is easier and more rapid to make changes and introduce
+    more ad-hoc abstractions (hence, the <em>soft</em> in software).
+    </p>
+
+    <p>
+    Amongst these, I have to admit to having acquired a kind of sense, a taste
+    for what works well... and what doesn't.
+    <p>
+
+    <h2>Effective Abstractions</h2>
+
+    <p>
+    One aspect of this is how "clean" the abstraction proposed is and how
+    little, ideally, I need cut the veil and peer into the black box to
+    understand it.
+    </p>
+
+    <p>
+    What I mean is, some abstractions are so good that I don't need to think
+    about them most of the time.
+    </p>
+
+    <p>
+    What makes an abstraction "better"? What makes it easier to use?
+    </p>
+    <p>
+    Four unscientific criteria come to mind:
+    </p>
+    <ol class="criteria-list">
+      <li>
+        <strong><em>an abstraction should be simpler than the abstracted thing.</em></strong>
+        <span class="criteria-cont">A more complex abstraction saves no mental energy to use.</span></li>
+      <li>
+        <strong><em>an abstraction should contain all the relevant behaviors of the abstracted thing.</em></strong>
+        <span class="criteria-cont">An incomplete abstraction wastes mental energy when it fails.</span></li>
+      <li>
+        <strong><em>an abstraction should be efficient.</em></strong>
+        <span class="criteria-cont">A slow abstraction will always be tempting not to use.</span></li>
+      <li>
+        <strong><em>an abstraction should be relevant.</em></strong>
+        <span class="criteria-cont">An irrelevant abstraction is of no use.</span>
+      </li>
+    </ol>
+
+    <p>
+    These goals are in tension, and there may not be a satisfactory answer in
+    all cases.
+    </p>
+
+    <p>
+    Certainly, there are different users of an abstraction with different goals
+    and usecases.
+    </p>
+
+    <p>
+    There are times when it is also practically better to consolidate on one
+    (suboptimal) answer/decision for an abstraction "question" than
+    fragment<a href="#fn-d" id="ref-d">[d]</a>,
+    and times when fragmenting is the right
+    decision<a href="#fn-e" id="ref-e">[e]</a>.
+    </p>
+
+    <h2>Procedural and Declarative Flavor</h2>
+
+    <p>
+    All abstractions describe an <em>interface</em> of what they produce.
+    Loosely speaking, an interface is the shape of the thing produced.
+    </p>
+    <p>
+    Abstractions differ in the style of description of the interface<a href="#fn-f" id="ref-f">[f]</a>:
+    </p>
+    <ul>
+      <li><em>Declarative abstractions</em> state the desired outcome without
+        committing to how it is achieved (e.g., a sorting specification).</li>
+      <li><em>Procedural abstractions</em> are characterized primarily by the
+        steps they perform (e.g., “shift/reduce until acceptance” for an LR
+        parser).</li>
+    </ul>
+    <p>
+    These should be thought of as lying on a sort of spectrum -- the cutoff is
+    subjective.
+    </p>
+    <p>
+    While you might surmise that hewing more declarative is "better", this
+    isn't necessarily the case.
+    A declarative abstraction might be less effective, say because it is too
+    inefficient, or it declares irrelevant details.
+    </p>
+    <p>
+    Some examples illustrate this general philosophy:
+    </p>
+
+    <h2>Examples</h2>
+
+
+    <h3>Sorting</h3>
+
+    <p>
+    Perhaps the canonical introductory algorithms problem, with good reason.
+    Given some order-comparable input data \(a_1,a_2,\ldots, a_n\), a sorted
+    transformation is a permutation \(\sigma\) such that data is
+    weakly-ascending after applying the permutation.
+    That is, for \(i,j \in [n]\),
+    $$
+    \sigma : [n] \to [n] \\
+    i \neq j \Rightarrow \sigma(i) \neq \sigma(j) \\
+    \sigma(i) \leq \sigma(j) \Rightarrow a_{\sigma(i)} \leq a_{\sigma(j)}
+                                                                                   $$
+    </p>
+
+    <p>
+    Like many algorithms topics, the problem is well defined declaratively, and
+    there are many solutions.
+    Quicksort, mergesort, bubblesort, ... all solve the problem (with different tradeoffs).
+    </p>
+
+    <p>
+    We can add more constraints, like <em>stability</em>, which may constrain
+    us further
+    (eg: in-place quicksorts are the canonical violator).
+    </p>
+
+    <p>
+    What makes the sorting problem so nice is that it has a simple interface
+    (give me a list of data, maybe some custom comparator), and the
+    sometimes-intricate details of the actual implementation can be often
+    ignored.
+    On top of that, there is room for variation in implementation within the
+    <em>same interface</em> when that is merited.
+    </p>
+
+    <h3>LR Parsers, and variants</h3>
+    <a href="https://en.wikipedia.org/wiki/LR_parser">LR parsers</a> build a
+    syntax tree by performing shift and reduce actions (determined from a
+    lookup table) for each token of input (possibly with lookahead).
+    </p>
+
+    <p>
+    A class of languages that are in a sweet spot of human comprehensibility
+    and sufficiently orderly to be useful are the context free languages.
+    Unfortunately, the full class of context-free languages have some
+    pathological examples that can't be parsed in linear time, but these
+    pathologies are somewhat rare in practical applications.
+    </p>
+
+    <p>
+    A variety of algorithms working on useful subsets of the context-free
+    languages come from the family of LR parsers.
+    They are generally highly efficient, able to parse through an input file in
+    a single pass.
+    Unfortunately, the exact description of what grammars a given variant (like
+    SLR, LALR(1), GLR, ...) can be used for is basically "what an
+    SLR/LALR(1)/GLR/... parses". There is no convenient shorthand.
+    The interface is procedural—accept if the table drives you to acceptance—and that makes it harder to reason about coverage or errors without looking at the mechanics.
+    </p>
+
+    <p>
+    These parsers also typically fall short in matters of error handling.
+    Also, when these parsers fail to parse, they often lack sufficient context
+    of what went wrong to meaningfully diagnose why the parse failed.
+They often cannot recover and try to meaningfully parse the remainder of
+    the document, rendering them of limited use in incremental parsing.
+    The somewhat inscrutable "shift/reduce error" messages generated are only
+    useful if you know a fair bit about how the parsers work, and know how to
+    lookup to actual parser table/state (hopefully parsing tool helps).
+    This limits their relevance.
+    </p>
+
+    <p>
+    As a result, for contemporary applications like language servers, these
+    language parsers have fallen into relative disuse.
+    </p>
+
+    <h3>Hash Tables</h3>
+    Hash tables solve the problem of doing quick lookups from a key to a value
+    (the dictionary problem).
+
+    <p>
+    With sufficient assumptions on the randomness of keys/hashes, the
+    asymptotic analysis of hash table behavior is
+    <a href="https://jeffe.cs.illinois.edu/teaching/algorithms/notes/05-hashing.pdf">well understood</a>
+    for various hashing and collision handling schemes including separate
+    chaining and various forms of probing.
+    Even though obtaining a concrete arrangement of slots is essentially
+    "perform all inserts in order," the inherently procedural behavior still admits effective analysis.
+    </p>
+
+    <p>
+    All the same, a common problem is that often keys are not sufficiently
+    random.
+    In some applications, tail latencies (say, a hash lookup with high
+    collisions/lots of probing) are material.
+    </p>
+
+    <p>
+    As it relates to efficiency, when the distribution of data or the set of
+    keys is well-known, pre-processing can reduce or even eliminate the
+    possibility of collisions<a href="#fn-g" id="ref-g">[g]</a>.
+    </p>
+
+    <p>
+    Nonetheless, due to their workhorse utility and applicability in so many
+    scenarios, hash tables are practically useful and highly effective.
+    <a href="https://youtu.be/K3qf8gRFESU?si=5C_CaxXY7IHdOM3O&t=3266">Imagine life without them!</a>
+    </p>
+
+
+    <h3>Floating Point Arithmetic</h3>
+
+    <p>
+    Doing computation over a numeric type that behaves like the reals is useful
+    across many domains.
+    The trouble is that digital computers can't store or retrieve real numbers.
+    Balancing the physical reality of limited memory, the needs for reasonable
+    accuracy and precision, general error handling semantics, and efficient
+    performance (chip area, instruction latency, throughput, energy / op) is a
+    difficult problem.
+    Add to that the reality that most authors of numerical programs will not be
+    experts in numerical methods, but nonetheless aim to be
+    <em>productive</em>, and the challenge only multiplies.
+    </p>
+
+    <p>
+    Various approximate numeric schemes have been considered
+    <a href="https://booksite.elsevier.com/9780128017333/content/Section%203-12_Hist%20Persp.pdf">over time</a>:
+    fixed-point (decimal) numbers, rational numbers, "bignum", and (many)
+    incompatible versions of floating point numbers.
+    However, the dominant format is 
+    <a href="https://en.wikipedia.org/wiki/IEEE_754">IEEE-754</a>, first
+    standardized in 1985.
+
+    While alternatives continue to exist and have uses in specific
+    cases<a href="#fn-h" id="ref-h">[h]</a>, IEEE-754 floats are undeniably
+    ubiquitous and a general default for "real" calculations.
+    </p>
+    
+    <p>
+    The actual specification 
+    (<a href="https://www.dsc.ufcg.edu.br/~cnum/modulos/Modulo2/IEEE754_2008.pdf">IEEE-754 2008</a>)
+    is divided into sections on representation/book-keeping, rounding rules,
+    actual operations (eg: arithmetic), special values (infinity/NaN's), errors
+    and error propagation, recommended elementary functions to implement, and
+    evaluation rules (eg: when to round a result).
+    For such a procedural topic, the specification is remarkably descriptive.
+    At the same time, the principles underlying the description represent a
+    clear awareness of hardware implementability while resolving ambiguities in
+    other formats of the era.
+    </p>
+
+    <p>
+    For end-users, the specification is based on a reasonable "psychologism" of how reals
+    "should" behave in many common cases.
+    It is both usable by non-experts, while creating clear enough boundaries
+    for specialists to continue to innovate (eg: through the development of
+    efficient elementary and special functions<a href="#ref-2">[2]</a> in both
+    software and hardware).
+    </p>
+
+    <h3>POSIX signals</h3>
+    <p>
+    POSIX signals are a famously procedural abstraction.
+    The interface surface is small integers mapped to dispositions, but most of the semantics leak from the implementation details of a given kernel and libc.
+    </p>
+    <p>
+    Delivery ordering is unspecified
+    (see <a href="https://linux.die.net/man/7/signal">signal(7)</a>),
+    yet applications tend to "fit" to actual observed behavior.
+    Multi-threaded delivery is tacked on to the basic APIs, and by default,
+    signals sent to the process are delivered to an arbitrary, random thread
+    (see <a href="https://linux.die.net/man/7/pthreads">pthreads(7)</a>)...
+    handling this is an exercise left to the reader.
+    </p>
+    <p>
+    The lack of queuing for most standard signals means bursts can collapse into one pending delivery, and which signal survives is procedural.
+    </p>
+    <p>
+    The net result is an API that looks simple but forces users to reason
+    operationally about interleavings, handler reentrancy, and hidden global
+    state, rather than giving a clean declarative model to build on.
+    </p>
+    <h3 id="linkers">Linkers</h3>
+    <p>
+    These are a workhorse of assembling programs. Most users are able to
+    lean on their default behavior most of the time.
+    </p>
+    <p>
+    ... But when there is an error, the tools are usually opaque about
+    <em>why</em> an error occurred.
+    </p>
+    <p>
+    More on this in the sequel.
+    </p>
+
+    <h2>A conclusion?</h2>
+
+    <p>
+    The criteria are not clear; many are competing.
+    Nonetheless, with experience using, building, and living with abstractions or
+    design patterns over time, a sense of "good taste" emerges.
+    As Potter Stewart wrote in
+    <a href="https://en.wikipedia.org/wiki/Jacobellis_v._Ohio">Jacobellis v Ohio</a>,
+    "I know it when I see it."
+    </p>
+    <p>
+    These notes hopefully put some meat on the bones of those intuitions and
+    what to look out for when evaluating a proposed abstraction pattern.
+    </p>
+
+    <h2>Footnotes</h2>
+    <ol class="footnotes">
+      <li id="fn-a">
+        <p>[a] To actually create these abstractions involves the use of tools/practices from later levels (like compilers to generate the operating system kernel program, algorithms to compute memory swapping, ...).</p>
+        <p>We should all be grateful for the hard work that came before which allows us to bootstrap/iterate at all layers of abstraction more effectively now. <a href="#ref-a" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-b">
+        <p>[b] Not strictly necessary, for example circuits doing useful computation can be built up by hand, or programs may execute in an environment without operating system support. <a href="#ref-b" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-c">
+        <p>[c] Although there is some <a href="https://docs.google.com/document/d/1iL0fYmMmariFoSvLd9U5nPVH1uFKC7bvVasUcYq78So/edit?usp=sharing">disagreement about the particulars</a>... <a href="#ref-c" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-d">
+        <p>[d] eg: the consolidation of focus on linux makes it better suited for generic applications than a myriad of alternatives which receive a fraction of the investment. <a href="#ref-d" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-e">
+        <p>[e] eg: there are a myriad of specialized operating systems that are better suited to specific applications than linux (say, hard realtime control in automotive or avionics, or low power draw).</p>
+        <p>And often you don't even want an OS/microkernel in embedded settings. <a href="#ref-e" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-f">
+        <p>[f] If the terms seem overly particular, it may be helpful to compare the terminology for analogous concepts in other domains:</p>
+        <table id="conceptual-axis-table">
+          <thead>
+            <tr>
+              <th>Conceptual Axis</th>
+              <th>"Descriptive" side</th>
+              <th>"Procedural" side</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Language theory</td>
+              <td>Declarative</td>
+              <td>Procedural / Operational</td>
+            </tr>
+            <tr>
+              <td>Semantics</td>
+              <td>Denotational</td>
+              <td>Operational</td>
+            </tr>
+            <tr>
+              <td>Logic / Math</td>
+              <td>Extensional</td>
+              <td>Intensional</td>
+            </tr>
+            <tr>
+              <td>Formal methods</td>
+              <td>Specification</td>
+              <td>Implementation</td>
+            </tr>
+            <tr>
+              <td>Relational model</td>
+              <td>Relational</td>
+              <td>Functional / Constructive</td>
+            </tr>
+          </tbody>
+        </table>
+        <p><a href="#ref-f" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-g">
+        <p>[g] A simple perfect hash example: if your keys are the integers \(K := [100, 200) \cup [250, 300)\), let</p>
+        <p>
+        \begin{align}
+            h : K &\to [0,150) \\
+            x &\mapsto x - 100 - \max(0, x - 200) + \max(0, x - 250).
+        \end{align}
+        </p>
+        <p>
+        For \(100 \le x &lt; 200\), both max terms vanish and \(h(x) = x - 100
+        \in [0, 100)\); for \(250 \le x &lt; 300\), the first max contributes
+        \(x-200\) and the second adds \(x-250\), so \(h(x) = x - 150 \in [100,
+        150)\).
+        Thus \(h : K \to [0,150)\) is a perfect hash
+        without branching
+        (<a href="https://godbolt.org/z/5osxqo94a">godbolt</a>).
+        <a href="#ref-g" class="footnote-backref">Back to text</a></p>
+      </li>
+      <li id="fn-h">
+        <p>
+        [h] At the time of writing, there is enormous investment in machine
+        learning and large language model design to increase scale.
+        The memory-pressure of representing large models can be reduced by
+        using more compact floating point representations such as
+        <a href="https://developer.nvidia.com/blog/accelerating-ai-training-with-tf32-tensor-cores/">tf32</a>,
+        <a href="https://en.wikipedia.org/wiki/Half-precision_floating-point_format">fp16</a>,
+        <a href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">bfloat16</a>,
+        <a href="https://developer.nvidia.com/blog/floating-point-8-an-introduction-to-efficient-lower-precision-ai-training/">fp8</a>,
+        <a href="https://developer.nvidia.com/blog/introducing-nvfp4-for-efficient-and-accurate-low-precision-inference/">fp4</a>,
+        and more exotic variants in the limit.
+        (Eventually the model architecture will simply 
+        <a href="https://en.wikipedia.org/wiki/Boltzmann_machine">degenerate</a>...)
+        </p>
+        <p>
+        There are also occasional attempts to come up with a genuinely broadly
+        applicable alternative, eg
+        <a href="https://en.wikipedia.org/wiki/Unum_(number_format)">posits</a>
+        (though they haven't really caught on).
+        <a href="#ref-h" class="footnote-backref">Back to text</a></p>
+      </li>
+    </ol>
+
+    <h2>References</h2>
+
+    <ol>
+      <li id="ref-1">P. P. Chu, <em>RTL Hardware Design Using VHDL: Coding for Efficiency, Portability, and Scalability</em>. Hoboken, NJ, USA: Wiley-Interscience, 2006.</li>
+      <li id="ref-2">W. H. Press, S. A. Teukolsky, W. T. Vetterling, and B. P. Flannery, <em>Numerical Recipes: The Art of Scientific Computing</em>, 3rd ed. Cambridge, U.K.: Cambridge Univ. Press, 2007.</li>
+    </ol>
+
+
+  </body>
+
+</html>
