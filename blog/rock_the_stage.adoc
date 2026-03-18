@@ -1,0 +1,86 @@
+= Notes on How to Rock the Stage | Arthur Ozga
+:docinfo: shared
+
+Back at Microsoft, I went to a seminar (they call them "courses") on the topic of public speaking,
+taught by then distinguished engineer / tech evangelist https://www.docjamesw.com/[James Whittaker].
+On that day, he spoke well and worked his audience (fresh hires and folks experiencing mid-life/career crises).
+While I was originally planning to transcribe notes from that seminar,
+I was instead enchanted by another https://www.youtube.com/watch?v=uKtMwmWv6Q0[talk on public speaking]
+he gave a year earlier with https://www.medickinson.com/[Michelle Dickinson].
+
+The actual talk manifests the ideas below and offers plenty of examples.
+James' speaking has a great quality of connecting so many disparate concepts -- sometimes whimsically --
+in a way that infects my mind a bit every time.
+He also gets away with being an ass in a way where calling him out makes me more of an ass!
+
+Notes from the talk:
+
+* Why speak? To influence people. What better way to influence people than with effective stage presence?
+
+* If you tell someone their own story, it will resonate.
+  So, speak *for* your audience, not *to* them!
+  James equates this to the old adage, "Show, don't tell."
+  Saying "I", "me", and talking about your accomplishments is a great way to speak *to* the audience.
+
+* A concept is an address footnote:[This idea meshes very well with the learning technique of chunking
+  and attempting to retain ideas past the memory consolidation period by forming connections to known ideas.
+  See also https://en.wikipedia.org/wiki/Sleep_spindle[sleep spindles]. More on this in another post.]
+  -- the name of the place where details are filed away.
+  Always give an address for the details.
+  Forcing an emotional connection is a way to create an address. Some examples:
+** imprint with a sensory experience -- sound, visuals, taste, touch, smell.
+** a shocking / visceral experience
+** imprint with a common language / experience
+** imprint with a surprising connection
+
+* You need to believe what you are saying to persuade.
+  For whatever reason (subtle cues?), in an FMRI study, the speaker and listener's brains mirrored
+  each others' activity (source?). This lends some credence to the idea that you need to be
+  emotionally invested in the presentation in the way you want your audience to be invested.
+
+* James has stories for important moments -- every project has a story.
+  Train yourself to recognize stories. Be a collector, inventor, and hunter of them.
+  They give you insight into the speaker's life.
+
+* Don't bombard. Pick *one* message. Is it tweetable?
+
+* *Preparation is not optional*. Preparation is personal. Some examples of personal habits:
+** practice with music to get a tempo
+** practice when you will breathe
+** practice by saying it out loud
+** record yourself
+** repeat the talk mentally over and over and over
+** repeat the talk in bed
+** practice the talk under increased pressure:
+*** tell the talk while naked in front of the mirror
+*** tell the talk to strangers
+
+* Practice by giving talks.
+
+* Nerves: they are like birthday candles -- savor them because they don't come that often.
+
+* Start strong! A talk is not a movie and the opening sentence is an upper bound on who will pay attention.
+  An audience that has opted in will overlook some mistakes.
+
+* Never turn your back to the audience.
+
+* PowerPoint should never be more than a prop. Don't rely on it; you should be able to give the talk
+  without any props. Always command the props, not the other way around (otherwise you are superfluous).
+  The exception is videos -- you prepared them to takeover the stage.
+
+* Accentuate the key phrases. They really matter. You can't do that while reading from a prompt.
+
+* Pauses are important. Use them thoughtfully.
+
+* Simple but deliberate stage movement and body language keeps the focus on the message.
+  Keep hands open. Hitler gave talks with fists. Pointing can be considered aggressive.
+  Standing behind a podium is too little stimulation. Dancing on the stage is too much.
+
+* Only look at notes in conjunction with another action (eg: turning).
+  Think of using illusions and misdirection to hide the use of notes.
+
+* Be genuine. Use your natural personality. It makes you more relatable. You will polarize, that's okay.
+  Even a persona is the personification of your goals and desires.
+
+* Finish strong (just like you started)!
+  Memories of an event tend to be colored by the average of the most extreme and last moments.

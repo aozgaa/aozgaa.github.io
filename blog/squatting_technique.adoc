@@ -1,0 +1,45 @@
+= Squatting Technique | Arthur Ozga
+:docinfo: shared
+
+*UPDATE* (2020/04/01): Since going to a gym is currently ill-advised and I do not
+have weights at home, I have been practicing technique using body weight. In
+order to get the intensity up, I have been doing Arithmetic Progression Squats
+(APS), which are more commonly known as
+https://www.menshealth.com/fitness/a19546566/death-by-air-squat-workout/["death by air squat"].
+A nice feature of this workout is that the first few sets give time to warm up and
+focus on perfecting technique. Also, the load on individual reps is low enough that
+you can sense where you are over-underutilizing a muscle group before an injury
+is imminent. I have not tried geometric progressions.
+
+A friend of mine told me I was spending too much time learning how to squat rather than just doing it.
+They are probably right.
+
+Unfortunately, I'd picked up the excellent
+https://aasgaardco.com/store/books-posters-dvd/books/starting-strength-basic-barbell-training[_Starting Strength: Basic Barbell Training_],
+and I was not to be deterred in learning the safest technique to improve strength.
+Here are some of my notes on squatting:
+
+* lifter + barbell center-of-mass should remain over mid foot
+* a lower bar allows for a more horizontal back at the bottom
+* front squats exert the butt more and hamstrings less
+* the bar should sit under the spine of the scapula
+* effect of low-bar compared to high-bar squats:
+** higher hamstring load
+** more horizontal back angle
+** more open knee angle
+** movement path is similar to dead lift & power clean
+* shoulder-width knees + 30° toes + knees out ⇒ groin stretch and activation
+* squat depth: hips go below level with top of patellas
+* exercise: no weight squat
+** back should be about 45° at the bottom
+** at the bottom, think hips up, not forward
+* keep neck in natural alignment -- think of squeezing a tennis ball with chin
+* eye-gaze: 4-5 feet in front of toes
+* narrower hands ⇒ more posterior shoulder flexion and keeps thoracic spine extended + straight
+* wrists: hands above bar. They do not carry weight
+* tighten muscles before lifting from rack
+* always face towards the rack -- forwards when re-racking
+* take only one step back from the rack
+
+This is an incomplete summary of the 64 pages(!) devoted to the squat.
+Which of these did you find intuitive? Which were surprising?

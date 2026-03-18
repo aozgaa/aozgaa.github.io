@@ -1,0 +1,20 @@
+= Resources for Building a Web Server | Arthur Ozga
+:docinfo: shared
+
+*Exercise*: pick a use-case (eg: static file server, streaming file server, database web server)
+and implement the bare minimum to be able to interact with it using standard tools (eg: curl).
+
+This means probably only supporting ipv4, HTTP/1.1 (1.2 is relatively complicated), and omitting
+most of the contents of the corresponding specs.
+
+I am working on hosting my personal site on such a web server instead of github.io.
+
+* https://beej.us/guide/bgnet/html/single/bgnet.html[Beej's Guide to Network Programming]
+* https://tools.ietf.org/html/rfc2616[rfc2616 -- http/1.1]
+* https://tools.ietf.org/html/rfc7231[rfc7231 -- http semantics and content]
+* http://www.kegel.com/c10k.html[The C10K Problem] (history and context)
+* https://lwn.net/Articles/726917/[zero-copy networking]
+* `man man`
+* `man write`
+* `man epoll`
+* `man splice`
