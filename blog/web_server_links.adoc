@@ -1,6 +1,10 @@
-= Resources for Building a Web Server | Arthur Ozga
+= Resources for Building a Web Server
+:title: Resources for Building a Web Server | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2019-09-04
 :docinfo: shared
 
+[.normal]
 *Exercise*: pick a use-case (eg: static file server, streaming file server, database web server)
 and implement the bare minimum to be able to interact with it using standard tools (eg: curl).
 

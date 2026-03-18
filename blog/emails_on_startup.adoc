@@ -1,7 +1,11 @@
-= Sending Emails on Startup when Gaming | Arthur Ozga
+= Sending Emails on Startup when Gaming
+:title: Sending Emails on Startup when Gaming | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2020-03-15
 :docinfo: shared
 :source-highlighter: rouge
 
+[.normal]
 I've been playing the video game _Magic the Gathering: Arena_ (aka MTGA) altogether too much.
 My brother asked me to alert him every time I play.
 One way to do this is to send an email every time I start the game.

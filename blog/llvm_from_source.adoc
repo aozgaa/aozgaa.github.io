@@ -1,7 +1,11 @@
-= Using LLVM Built From Source | Arthur Ozga
+= Using LLVM Built From Source
+:title: Using LLVM Built From Source | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2024-02-17
 :docinfo: shared
 :source-highlighter: rouge
 
+[.normal]
 Many features of the latest revision of C++ and tooling are not available on
 stable compilers/stdlib's packaged in linux distributions (eg: debian/ubuntu).
 For example, modules and `<print>` are only partially implemented at the time of writing.

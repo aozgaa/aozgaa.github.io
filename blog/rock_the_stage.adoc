@@ -1,6 +1,10 @@
-= Notes on How to Rock the Stage | Arthur Ozga
+= Notes on How to Rock the Stage
+:title: Notes on How to Rock the Stage | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2020-03-17
 :docinfo: shared
 
+[.normal]
 Back at Microsoft, I went to a seminar (they call them "courses") on the topic of public speaking,
 taught by then distinguished engineer / tech evangelist https://www.docjamesw.com/[James Whittaker].
 On that day, he spoke well and worked his audience (fresh hires and folks experiencing mid-life/career crises).

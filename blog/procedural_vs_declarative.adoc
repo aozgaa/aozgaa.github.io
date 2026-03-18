@@ -1,4 +1,7 @@
-= Procedural vs Declarative Abstractions | Arthur Ozga
+= Procedural vs Declarative Abstractions
+:title: Procedural vs Declarative Abstractions | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2025-12-05
 :docinfo: shared
 :stem: latexmath
 :source-highlighter: rouge
@@ -145,7 +148,7 @@ All abstractions describe an _interface_ of what they produce.
 Loosely speaking, an interface is the shape of the thing produced.
 
 Abstractions differ in the style of description of the
-interface pass:c[<sup><a href="#fn-f" id="ref-f">[f]</a></sup>]:
+interface+++<sup><a href="#fn-f" id="ref-f">[f]</a></sup>+++:
 
 * _Declarative abstractions_ state the desired outcome without
   committing to how it is achieved (e.g., a sorting specification).
@@ -251,7 +254,7 @@ collisions/lots of probing) are material.
 
 As it relates to efficiency, when the distribution of data or the set of
 keys is well-known, pre-processing can reduce or even eliminate the
-possibility of collisions pass:c[<sup><a href="#fn-g" id="ref-g">[g]</a></sup>].
+possibility of collisions+++<sup><a href="#fn-g" id="ref-g">[g]</a></sup>+++.
 
 Nonetheless, due to their workhorse utility and applicability in so many
 scenarios, hash tables are practically useful and highly effective.
@@ -279,7 +282,7 @@ https://en.wikipedia.org/wiki/IEEE_754[IEEE-754], first
 standardized in 1985.
 
 While alternatives continue to exist and have uses in specific
-cases pass:c[<sup><a href="#fn-h" id="ref-h">[h]</a></sup>],
+cases+++<sup><a href="#fn-h" id="ref-h">[h]</a></sup>+++,
 IEEE-754 floats are undeniably
 ubiquitous and a general default for "real" calculations.
 
@@ -405,12 +408,11 @@ using more compact floating point representations such as
 and more exotic variants in the limit.
 (Eventually the model architecture will simply
 <a href="https://en.wikipedia.org/wiki/Boltzmann_machine">degenerate</a>...)
-<p>
+<br><br>
 There are also occasional attempts to come up with a genuinely broadly
 applicable alternative, eg
 <a href="https://en.wikipedia.org/wiki/Unum_(number_format)">posits</a>
 (though they haven't really caught on).
-</p>
 <a href="#ref-h" class="endnote-backref">↩</a>
 </div>
 

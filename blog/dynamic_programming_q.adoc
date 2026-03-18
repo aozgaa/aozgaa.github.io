@@ -1,8 +1,12 @@
-= Implementing a Dynamic Programming Algorithm in Q | Arthur Ozga
+= Implementing a Dynamic Programming Algorithm in Q
+:title: Implementing a Dynamic Programming Algorithm in Q | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2020-06-02
 :docinfo: shared
 :stem: latexmath
 :source-highlighter: rouge
 
+[.normal]
 Array-based programming languages are often touted as providing superior performance
 and brief, "mind-expanding" program implementations.
 While examples of elegant programming koans exist, direct comparisons between
