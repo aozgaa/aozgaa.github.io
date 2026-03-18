@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Static HTML personal website hosted on GitHub Pages (`aozgaa.github.io`). All pages are hand-authored HTML with inline CSS — no build system, no templates, no JavaScript frameworks.
+Static HTML personal website hosted on GitHub Pages (`aozgaa.github.io`). All pages are hand-authored HTML with inline
+CSS — no build system, no templates, no JavaScript frameworks.
 
 ## Structure
 
@@ -25,5 +26,6 @@ Static HTML personal website hosted on GitHub Pages (`aozgaa.github.io`). All pa
 ## Notes
 
 - `library/index.html` is listed in `.gitignore` — do not commit it
-- The `.pixi/` directory contains `pandoc` and `hugo` binaries but there is no `pixi.toml` or active build pipeline; these tools are available if needed for local authoring
+- The `.pixi/` directory contains `pandoc` and `hugo` binaries but there is no `pixi.toml` or active build pipeline;
+  these tools are available if needed for local authoring
 - `layouts/_default/partials/` exists but is empty
