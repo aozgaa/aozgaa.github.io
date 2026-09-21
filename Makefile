@@ -1,12 +1,12 @@
-GEM_BIN := $(HOME)/.local/share/gem/ruby/3.2.0/bin
-ASCIIDOCTOR ?= $(shell command -v asciidoctor || echo $(GEM_BIN)/asciidoctor)
+ASCIIDOCTOR ?= bundle exec asciidoctor
 
 ADOC_FLAGS := \
   -r asciidoctor-katex \
   -a stem=latexmath \
   -a source-highlighter=rouge \
   -a rouge-style=github \
-  -a docinfo=shared
+  -a docinfo=shared \
+  -a reproducible
 
 SOURCES := $(wildcard blog/*.adoc)
 TARGETS := $(SOURCES:.adoc=.html)

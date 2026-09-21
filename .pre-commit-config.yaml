@@ -6,3 +6,9 @@ repos:
         entry: flowmark --auto
         language: system
         types_or: [markdown]
+      - id: build-blog
+        name: build blog
+        entry: make -B all
+        language: system
+        pass_filenames: false
+        files: '^(blog/|Makefile|Gemfile\.lock)'

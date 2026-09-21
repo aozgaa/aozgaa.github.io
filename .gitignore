@@ -1,2 +1,5 @@
 *.swp
 *.swo
+
+# bundler: vendored gems (versions are pinned by Gemfile.lock)
+vendor/bundle/

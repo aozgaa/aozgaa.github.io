@@ -16,7 +16,7 @@ Rebuild and commit the `.html` with every `.adoc` change or the published site g
 ## Build and serve
 
 ```sh
-./scripts/build.sh   # build all posts (wraps `make all`)
+make                 # build all posts
 ./scripts/serve.sh   # http://localhost:8080/ (PORT=9000 to override)
 ./scripts/watch.sh   # rebuild on save; Ctrl-C to stop
 make clean           # delete generated blog/*.html
@@ -30,35 +30,49 @@ the page yourself. `make` is incremental.
 
 ## Dependencies
 
-Ruby **2.7+ required** (rouge 4’s floor), **3.4.x recommended** — the newest series in normal maintenance.
-p620 still runs 3.2.3, which went EOL 2026-04-01.
-
-What must match across machines is the **gem versions**, not the ruby version: rouge’s theme CSS is baked into the
-committed HTML, so a different rouge churns every post containing code blocks.
-
-| Gem | Version |
-| --- | --- |
-| `asciidoctor` | 2.0.26 |
-| `asciidoctor-katex` | 0.4.1 |
-| `rouge` | 4.7.0 |
-
-`entr` (or Linux `inotify-tools`) is optional, for `watch.sh` only.
-No pixi, node, or hugo.
-
-KaTeX math and rouge highlighting are rendered at build time — posts need no JavaScript.
-Only the KaTeX stylesheet comes from a CDN, via `blog/docinfo.html`.
+Gems are managed by **bundler** and pinned in `Gemfile.lock`, so every machine builds with identical versions.
+You supply the ruby; the repo supplies the rest.
 
 ```sh
-sudo apt install ruby-full entr            # Linux
-sudo port install ruby34 entr              # macOS
-gem install --user-install asciidoctor asciidoctor-katex rouge
+bundle install      # installs into ./vendor/bundle (gitignored)
 ```
 
-The scripts add `$(ruby -e 'print Gem.user_dir')/bin` to `PATH` themselves.
+What your environment must provide:
 
-**macOS caveat:** the system ruby is 2.6, below rouge 4’s floor, so it silently falls back to rouge 3.x — whose `github`
-theme emits different CSS, churning every rebuilt post with code blocks.
-Install a MacPorts ruby first.
+- **ruby >= 2.7** and **bundler**. p620 runs 3.2.3 (EOL 2026-04-01); this Mac runs MacPorts 4.0.7.
+- **a JavaScript runtime** — `asciidoctor-katex` renders math through `execjs`. Node, or macOS’s built-in
+  JavaScriptCore, will do; without one, only posts containing math fail.
+- **a UTF-8 locale** (`LANG=en_US.UTF-8` or similar).
+  Under a US-ASCII locale execjs dies on posts with non-ASCII characters.
+- optional: `entr`, or Linux `inotify-tools` — for `watch.sh` only
+
+`.bundle/config` (committed) sets `BUNDLE_PATH=vendor/bundle`, so gems land in the repo rather than in a system gem dir
+you may not own. `make` invokes `bundle exec asciidoctor`.
+
+Two notes on the pins, both learned the hard way:
+
+- **rouge must be 4+.** rouge 3 ships different `github` theme CSS, which is inlined into every post with a source
+  block, so building with it rewrites all of them.
+  The lockfile makes this moot; the Gemfile constraint keeps it so.
+- **`logger` is declared explicitly.** Ruby 4.0 moved it out of the default gems, but asciidoctor 2.0.26 still requires
+  it without declaring the dependency, so `bundle exec asciidoctor` dies without it.
+
+KaTeX math and rouge highlighting render at build time, so posts need no JavaScript to *view*. Only the KaTeX stylesheet
+comes from a CDN, via `blog/docinfo.html`.
+
+Builds are reproducible (`-a reproducible`), so rebuilding a post with no source change produces no diff.
+Without it asciidoctor stamps the build time into every footer.
+
+## Pre-commit hooks
+
+```sh
+pre-commit install
+```
+
+- **flowmark** — formats `.md` at 120 columns
+- **build blog** — runs `make -B all`. If that changes any generated HTML, pre-commit fails the commit with “files were
+  modified by this hook”; the rebuilt files are already there, so `git add blog/*.html` and commit again.
+  `-B` forces the rebuild because git does not preserve mtimes, which makes make’s staleness check unreliable here.
 
 ## Adding a blog post
 
@@ -74,7 +88,7 @@ Install a MacPorts ruby first.
 
 2. Add a row to `blog/index.html` (newest first, `yyyymmdd`).
 
-3. `./scripts/build.sh`, check with `./scripts/serve.sh`, commit the `.adoc` **and** the `.html`.
+3. `make`, check with `./scripts/serve.sh`, commit the `.adoc` **and** the `.html`.
 
 ## Markdown formatting
 

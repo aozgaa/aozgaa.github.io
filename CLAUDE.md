@@ -20,7 +20,7 @@ JavaScript frameworks.
 - `blog/index.html` — hand-maintained index table; `blog/docinfo.html` — shared docinfo (KaTeX CSS + body styles)
 - `library/index.html`, `links/index.html`, `course_notes/index.html` — hand-written sections
 - `content/` — static files (PDFs, GPG key); `img/` — images
-- `scripts/{build,watch,serve}.sh` — build, rebuild-on-save, local preview; `Makefile` — incremental `.adoc` → `.html`
+- `make` builds; `scripts/watch.sh` rebuilds on save, `scripts/serve.sh` previews locally
 
 ## Conventions
 
@@ -34,10 +34,10 @@ JavaScript frameworks.
 ## Notes
 
 - **Always rebuild and commit the generated `.html` after editing an `.adoc`** — the published site has no build step
-- Ruby 2.7+ required (rouge 4’s floor), 3.4.x recommended; p620 runs 3.2.3, which is EOL as of 2026-04-01
-- Pin the same **gem** versions across machines — rouge’s theme CSS is baked into the committed HTML
-- macOS system ruby is 2.6, below that floor, so it falls back to rouge 3.x — whose theme CSS differs, churning every
-  rebuilt post with code blocks.
-  Use a MacPorts ruby (`sudo port install ruby34`) instead.
-- The scripts add this machine’s user gem dir to `PATH`; the Makefile’s `ASCIIDOCTOR` can be overridden
+- Ruby 2.7+ required (rouge 4’s floor), 3.4+ recommended; p620 runs 3.2.3 (EOL 2026-04-01), this Mac MacPorts 4.0.7
+- The scripts assume `asciidoctor` is on `PATH`; environment setup is the user’s job, documented in `README.md`
+- Builds are reproducible (`-a reproducible`); without it asciidoctor stamps build time into every footer
+- The `build-blog` pre-commit hook runs `make -B all`; pre-commit fails the commit if that changed any HTML
+- rouge must be 4+ (rouge 3 emits different theme CSS); `logger` is in the Gemfile because ruby 4.0 dropped it from the
+  default gems while asciidoctor still requires it undeclared
 - `library/index.html` is tracked in git (it was previously gitignored; it no longer is)
