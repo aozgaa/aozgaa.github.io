@@ -1,0 +1,8 @@
+= Type Erasure Libraries
+:title: Type Erasure Libraries | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2026-09-20
+:docinfo: shared
+
+[.normal]
+TODO
