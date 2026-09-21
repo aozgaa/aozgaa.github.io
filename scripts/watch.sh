@@ -4,7 +4,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-export PATH="$HOME/.local/share/gem/ruby/3.2.0/bin:$PATH"
+# Look in both the p620 gem dir and whatever this machine's user gem dir is.
+export PATH="$HOME/.local/share/gem/ruby/3.2.0/bin:$(ruby -e 'print Gem.user_dir' 2>/dev/null)/bin:$PATH"
 
 cd "$REPO_ROOT"
 
@@ -22,7 +23,8 @@ elif command -v inotifywait &>/dev/null; then
 else
   echo "ERROR: neither 'entr' nor 'inotifywait' found."
   echo "Install one of:"
-  echo "  sudo apt install entr"
-  echo "  sudo apt install inotify-tools"
+  echo "  sudo port install entr          # macOS"
+  echo "  sudo apt install entr           # Linux"
+  echo "  sudo apt install inotify-tools  # Linux"
   exit 1
 fi

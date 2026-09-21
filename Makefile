@@ -1,5 +1,5 @@
 GEM_BIN := $(HOME)/.local/share/gem/ruby/3.2.0/bin
-ASCIIDOCTOR := $(GEM_BIN)/asciidoctor
+ASCIIDOCTOR ?= $(shell command -v asciidoctor || echo $(GEM_BIN)/asciidoctor)
 
 ADOC_FLAGS := \
   -r asciidoctor-katex \

@@ -4,28 +4,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Static HTML personal website hosted on GitHub Pages (`aozgaa.github.io`). All pages are hand-authored HTML with inline
-CSS — no build system, no templates, no JavaScript frameworks.
+Personal website on GitHub Pages (`aozgaa.github.io`). Static files served directly — no CI, no server-side build, no
+JavaScript frameworks.
+
+- Blog posts: authored in AsciiDoc (`blog/*.adoc`), compiled by `asciidoctor` via the `Makefile`. Generated
+  `blog/*.html` is **committed**, because Pages serves it as-is.
+- Everything else (`index.html`, `links/`, `course_notes/`, `library/`): hand-written HTML, inline `<style>`, no build.
+
+`README.md` has the dependency list, install commands, and build/serve/watch workflow.
 
 ## Structure
 
 - `index.html` — homepage (two-column layout: left labels, right content)
-- `blog/` — blog posts as individual `.html` files; `blog/index.html` is the index
-- `library/index.html` — book reading list (gitignored, likely generated or manually maintained)
-- `links/index.html`, `course_notes/index.html` — other hand-written sections
-- `content/` — static files (PDFs, GPG key)
-- `img/` — images
+- `blog/*.adoc` — post sources; `blog/*.html` — generated output, committed
+- `blog/index.html` — hand-maintained index table; `blog/docinfo.html` — shared docinfo (KaTeX CSS + body styles)
+- `library/index.html`, `links/index.html`, `course_notes/index.html` — hand-written sections
+- `content/` — static files (PDFs, GPG key); `img/` — images
+- `scripts/{build,watch,serve}.sh` — build, rebuild-on-save, local preview; `Makefile` — incremental `.adoc` → `.html`
 
 ## Conventions
 
-- Pages use inline `<style>` blocks rather than external stylesheets
-- Math rendering uses KaTeX loaded from CDN (see `blog/procedural_vs_declarative.html` for the standard snippet)
-- Blog post filenames use `snake_case`; the blog index (`blog/index.html`) is updated manually when adding a new post
-- Dates in the blog index use `yyyymmdd` format
+- Post filenames use `snake_case`; headers set `:title: <Title> | Arthur Ozga`, `:author:`, `:revdate: yyyy-mm-dd`,
+  `:docinfo: shared`
+- `blog/index.html` is updated **manually** when adding a post; newest first, date as `yyyymmdd`
+- Math (`stem:` macros, via `asciidoctor-katex`) and code highlighting (`rouge`, `github` style) render at build time —
+  no client-side JS; only the KaTeX stylesheet comes from a CDN
+- `.md` files are formatted by `flowmark` at 120 columns via a pre-commit hook
 
 ## Notes
 
-- `library/index.html` is listed in `.gitignore` — do not commit it
-- The `.pixi/` directory contains `pandoc` and `hugo` binaries but there is no `pixi.toml` or active build pipeline;
-  these tools are available if needed for local authoring
-- `layouts/_default/partials/` exists but is empty
+- **Always rebuild and commit the generated `.html` after editing an `.adoc`** — the published site has no build step
+- Ruby 2.7+ required (rouge 4’s floor), 3.4.x recommended; p620 runs 3.2.3, which is EOL as of 2026-04-01
+- Pin the same **gem** versions across machines — rouge’s theme CSS is baked into the committed HTML
+- macOS system ruby is 2.6, below that floor, so it falls back to rouge 3.x — whose theme CSS differs, churning every
+  rebuilt post with code blocks.
+  Use a MacPorts ruby (`sudo port install ruby34`) instead.
+- The scripts add this machine’s user gem dir to `PATH`; the Makefile’s `ASCIIDOCTOR` can be overridden
+- `library/index.html` is tracked in git (it was previously gitignored; it no longer is)
