@@ -434,6 +434,124 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 #footer-text{color:rgba(0,0,0,.6);font-size:.9em}}
 @media amzn-kf8{#header,#content,#footnotes,#footer{padding:0}}
 </style>
+<style>
+pre.rouge table td { padding: 5px; }
+pre.rouge table pre { margin: 0; }
+pre.rouge, pre.rouge .w {
+  color: #24292f;
+  background-color: #f6f8fa;
+}
+pre.rouge .k, pre.rouge .kd, pre.rouge .kn, pre.rouge .kp, pre.rouge .kr, pre.rouge .kt, pre.rouge .kv {
+  color: #cf222e;
+}
+pre.rouge .gr {
+  color: #f6f8fa;
+}
+pre.rouge .gd {
+  color: #82071e;
+  background-color: #ffebe9;
+}
+pre.rouge .nb {
+  color: #953800;
+}
+pre.rouge .nc {
+  color: #953800;
+}
+pre.rouge .no {
+  color: #953800;
+}
+pre.rouge .nn {
+  color: #953800;
+}
+pre.rouge .sr {
+  color: #116329;
+}
+pre.rouge .na {
+  color: #116329;
+}
+pre.rouge .nt {
+  color: #116329;
+}
+pre.rouge .gi {
+  color: #116329;
+  background-color: #dafbe1;
+}
+pre.rouge .ges {
+  font-weight: bold;
+  font-style: italic;
+}
+pre.rouge .kc {
+  color: #0550ae;
+}
+pre.rouge .l, pre.rouge .ld, pre.rouge .m, pre.rouge .mb, pre.rouge .mf, pre.rouge .mh, pre.rouge .mi, pre.rouge .il, pre.rouge .mo, pre.rouge .mx {
+  color: #0550ae;
+}
+pre.rouge .sb {
+  color: #0550ae;
+}
+pre.rouge .bp {
+  color: #0550ae;
+}
+pre.rouge .ne {
+  color: #0550ae;
+}
+pre.rouge .nl {
+  color: #0550ae;
+}
+pre.rouge .py {
+  color: #0550ae;
+}
+pre.rouge .nv, pre.rouge .vc, pre.rouge .vg, pre.rouge .vi, pre.rouge .vm {
+  color: #0550ae;
+}
+pre.rouge .o, pre.rouge .ow {
+  color: #0550ae;
+}
+pre.rouge .gh {
+  color: #0550ae;
+  font-weight: bold;
+}
+pre.rouge .gu {
+  color: #0550ae;
+  font-weight: bold;
+}
+pre.rouge .s, pre.rouge .sa, pre.rouge .sc, pre.rouge .dl, pre.rouge .sd, pre.rouge .s2, pre.rouge .se, pre.rouge .sh, pre.rouge .sx, pre.rouge .s1, pre.rouge .ss {
+  color: #0a3069;
+}
+pre.rouge .nd {
+  color: #8250df;
+}
+pre.rouge .nf, pre.rouge .fm {
+  color: #8250df;
+}
+pre.rouge .err {
+  color: #f6f8fa;
+  background-color: #82071e;
+}
+pre.rouge .c, pre.rouge .ch, pre.rouge .cd, pre.rouge .cm, pre.rouge .cp, pre.rouge .cpf, pre.rouge .c1, pre.rouge .cs {
+  color: #6e7781;
+}
+pre.rouge .gl {
+  color: #6e7781;
+}
+pre.rouge .gt {
+  color: #6e7781;
+}
+pre.rouge .ni {
+  color: #24292f;
+}
+pre.rouge .si {
+  color: #24292f;
+}
+pre.rouge .ge {
+  color: #24292f;
+  font-style: italic;
+}
+pre.rouge .gs {
+  color: #24292f;
+  font-weight: bold;
+}
+</style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css" integrity="sha384-WcoG4HRXMzYzfCgiyfrySxx90XSl2rxY5mnVY5TwtWE6KLrArNKn0T/mOgNL0Mmi" crossorigin="anonymous">
 <style>
 body {
@@ -452,8 +570,184 @@ body {
 </div>
 </div>
 <div id="content">
-<div class="paragraph normal">
-<p>TODO</p>
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph">
+<p>Type erasure is a pattern in C++ in which information about the concrete type of an object (it&#8217;s actual
+size/alignment/methods) are hidden by way an opaque "handle", which knows how to call the object.</p>
+</div>
+<div class="paragraph">
+<p>Having some mechanism for achieving such an indirection is helpful in several respects.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_basic_problem_coupling_dependencies">The Basic Problem: Coupling Dependencies</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Consider the following basic setup:</p>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p><code>libApi</code> defines a <code>BaseFoo</code> object which the other libaries will use</p>
+</li>
+<li>
+<p><code>libB</code> has a <code>void bfunc(const BaseFoo&amp;)</code> function</p>
+</li>
+<li>
+<p><code>libC</code> has a <code>ConcreteFoo</code> impl</p>
+</li>
+<li>
+<p><code>libD</code> wants to <em>call</em> <code>bfunc(ConcreteFoo{})</code> somewhere in its code</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>TODO: picture (mermaid?)</p>
+</div>
+<div class="paragraph">
+<p>This is workable in the case where <code>lib{B,C,D}</code> all depend on <code>libApi</code>&#8201;&#8212;&#8201;that is, all the libraries are part of the "same
+ecosystem."
+Unfortunately, when programming in the large, this assumption is too strong, eg there may be no base types that are
+shared between <code>boost::asio</code>, <code>std::execution</code>, <code>abseil</code>, <code>folly</code>, <code>opengl</code>,&#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>In the case where <code>libC</code> doesn&#8217;t know about <code>libApi</code>, <code>libD</code> has to do some extra work. Roughly:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="cpp"><span class="k">class</span> <span class="nc">ConcreteFooAdapter</span> <span class="o">:</span> <span class="n">BaseFoo</span> <span class="p">{</span>
+  <span class="nl">public:</span>
+  <span class="n">ConcreteFooModel</span><span class="p">(</span><span class="n">ConcreteFoo</span> <span class="o">&amp;</span><span class="n">foo</span><span class="p">)</span> <span class="o">:</span> <span class="n">foo_</span><span class="p">{</span><span class="n">foo</span><span class="p">}</span> <span class="p">{}</span>
+
+  <span class="k">virtual</span> <span class="kt">int</span> <span class="nf">foomethod1</span><span class="p">(...</span><span class="n">args</span><span class="p">)</span> <span class="k">override</span> <span class="p">{</span> <span class="n">foo_</span><span class="p">.</span><span class="n">foomethod1</span><span class="p">(</span><span class="n">args</span><span class="p">..);</span> <span class="p">}</span>
+  <span class="k">virtual</span> <span class="kt">float</span> <span class="nf">foomethod2</span><span class="p">(...</span><span class="n">args</span><span class="p">)</span> <span class="k">override</span> <span class="p">{</span> <span class="n">foo_</span><span class="p">.</span><span class="n">foomethod2</span><span class="p">(</span><span class="n">args</span><span class="p">..);</span> <span class="p">}</span>
+
+  <span class="k">private</span><span class="o">:</span>
+  <span class="n">ConcreteFoo</span> <span class="o">&amp;</span><span class="n">foo_</span><span class="p">;</span> <span class="c1">// can also own copy depending on needs</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>There are some downsides to this approach:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>writing it out is tedious and an additional maintenance point.</p>
+</li>
+<li>
+<p>the virtual indirection is typically a runtime cost. The <code>virtual</code> keyword implies a very particular implementation
+with external vtables in most compilers.</p>
+</li>
+<li>
+<p>If implementing/using many API&#8217;s, you need to enumerate all the base classes with multiple inheritance, adding many
+vtable ptrs to class layout (or many adapters with annoying lifetimes to track).</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Now consider the case where <code>libB</code> itself doesn&#8217;t want to declare or depend on a separate <code>libApi</code>&#8201;&#8212;&#8201;what can it do?</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><code>libB</code> can include <code>class BaseFoo {&#8230;&#8203;};</code> somewhere, with the same downstream coupling issues alread discussed.</p>
+</li>
+<li>
+<p><code>libB</code> can declare by way of some template and/or concepts, the expectation on <code>BaseFoo</code>, something like:</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="cpp"><span class="c1">// optional but helpful for diagnostics/debugging</span>
+<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="nc">Foo</span><span class="p">&gt;</span>
+<span class="k">concept</span> <span class="n">FooConcept</span> <span class="o">=</span> <span class="k">requires</span><span class="p">(</span><span class="n">Foo</span> <span class="n">f</span><span class="p">,</span> <span class="p">...</span><span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">{</span> <span class="n">f</span><span class="p">.</span><span class="n">foomethod1</span><span class="p">(</span><span class="n">args</span><span class="p">...)</span> <span class="p">}</span> <span class="o">-&gt;</span> <span class="n">std</span><span class="o">::</span><span class="n">same_as</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">;</span>
+  <span class="p">{</span> <span class="n">f</span><span class="p">.</span><span class="n">foomethod2</span><span class="p">(</span><span class="n">args</span><span class="p">...)</span> <span class="p">}</span> <span class="o">-&gt;</span> <span class="n">std</span><span class="o">::</span><span class="n">same_as</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">template</span><span class="o">&lt;</span><span class="n">FooConcept</span> <span class="n">Foo</span><span class="p">&gt;</span>
+<span class="kt">void</span> <span class="nf">bfunc</span><span class="p">(</span><span class="k">const</span> <span class="n">Foo</span><span class="o">&amp;</span><span class="p">)</span> <span class="p">{</span> <span class="p">...</span> <span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This works but now, in order to make <code>bfunc</code> work with arbitrary types, the <em>definition</em> has been moved into the header.
+If instead we knew an enumeration of types we&#8217;d use, we could just explicitly overload or use extern templates to keep
+hiding the impl.</p>
+</div>
+<div class="paragraph">
+<p>A major problem with using templates is that compilation gets pushed into the client TU. Both the frontend
+(tokenization/parsing/binding) code and backend code generation can be quite expensive. The C standard library takes
+this approach and this is a reason for slow compile times in most C code.</p>
+</div>
+<div class="paragraph">
+<p>Are there any other options?</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_data_orientation_and_raw_pointers">Data Orientation and Raw Pointers</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>One approach is to act on builtin data types and avoid defining a <code>BaseFoo</code> class/concept-constraint at all. When
+applicable, it becomes the case that "there is no spoon."
+Instead libraries can pass around some fundamental types for handles:</p>
+</div>
+<div class="olist loweralpha">
+<ol class="loweralpha" type="a">
+<li>
+<p><code>int fd</code>&#8201;&#8212;&#8201;common in posix/unix for IO to files, pipes, sockets, pseudofs, &#8230;&#8203;</p>
+</li>
+<li>
+<p><code>int handle</code>&#8201;&#8212;&#8201;in gamedev with entity-component-systems, there may be no struct at all, but instead tables with
+  (possibly runtime defined) columns, and the handle acts as a join key for queries (can be as simple as an offset/index
+into some SoA struct). Then user defined scripts can "act on the table" or suboclumns&#8201;&#8212;&#8201;the user scripts are simply
+functions with some arity of fundamental columns eg: <code>bool damageKills(int hp, int dmg, double resistance)</code> or similar.</p>
+</li>
+<li>
+<p>function pointers, like <code>int (*compar)(const void *, const void *)</code>&#8201;&#8212;&#8201;common in clib routines, like <code>qsort(3)</code>.</p>
+</li>
+<li>
+<p>opaque pointers, eg <code>void*</code>, paired with a callback <code>void (<strong>cb)(void *)</code>&#8201;&#8212;&#8201;useful in c-style callback programming, it
+  is the user&#8217;s responsibility to ensure the lifetime of data is valid at the time of callback, and that resulting
+c-style casts (effectively, <code>reinterpret_cast&lt;Data</strong>&gt;()</code>), are valid. As the program size grows, it can be difficult to
+track the interactions between callbacks but for small programs, this is reasonable to follow.
+This pattern is commonly used in c-code, eg in libpcap:</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>typedef void (*pcap_handler)(u_char *user, const struct pcap_pkthdr *h,
+    const u_char *bytes);
+int pcap_loop(pcap_t *p, int cnt,
+    pcap_handler callback, u_char *user);</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>These all work. Applications of significant complexity have been written in these styles and power safety-critical
+systems you use every day, such as in your car.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_introducing_type_erasure">Introducing Type Erasure</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>And yet, the power of type systems to catch errors remains alluring.</p>
+</div>
+<div class="paragraph">
+<p>In the case of callbacks, it <em>feels</em> like it should be possible to write code which looks more natural ("straight-line
+logic").</p>
+</div>
+<div class="paragraph">
+<p>In the case of dependency management, it <em>feels</em> like there should be some way to decouple/invert dependencies without
+sacrificing the eventual performance.</p>
+</div>
+</div>
 </div>
 </div>
 <div id="footer">

@@ -3,6 +3,117 @@
 :author: Arthur Ozga
 :revdate: 2026-09-20
 :docinfo: shared
+:stem: latexmath
+:source-highlighter: rouge
 
-[.normal]
-TODO
+Type erasure is a pattern in C++ in which information about the concrete type of an object (it's actual
+size/alignment/methods) are hidden by way an opaque "handle", which knows how to call the object.
+
+Having some mechanism for achieving such an indirection is helpful in several respects.
+
+== The Basic Problem: Coupling Dependencies
+
+Consider the following basic setup:
+[loweralpha]
+. `libApi` defines a `BaseFoo` object which the other libaries will use
+. `libB` has a `void bfunc(const BaseFoo&)` function
+. `libC` has a `ConcreteFoo` impl
+. `libD` wants to _call_ `bfunc(ConcreteFoo{})` somewhere in its code
+
+TODO: picture (mermaid?)
+
+This is workable in the case where `lib{B,C,D}` all depend on `libApi` -- that is, all the libraries are part of the "same
+ecosystem."
+Unfortunately, when programming in the large, this assumption is too strong, eg there may be no base types that are
+shared between `boost::asio`, `std::execution`, `abseil`, `folly`, `opengl`,...
+
+In the case where `libC` doesn't know about `libApi`, `libD` has to do some extra work. Roughly:
+[source,cpp]
+----
+class ConcreteFooAdapter : BaseFoo {
+  public:
+  ConcreteFooModel(ConcreteFoo &foo) : foo_{foo} {}
+  
+  virtual int foomethod1(...args) override { foo_.foomethod1(args..); }
+  virtual float foomethod2(...args) override { foo_.foomethod2(args..); }
+ 
+  private:
+  ConcreteFoo &foo_; // can also own copy depending on needs
+}
+----
+
+There are some downsides to this approach:
+
+. writing it out is tedious and an additional maintenance point.
+. the virtual indirection is typically a runtime cost. The `virtual` keyword implies a very particular implementation
+  with external vtables in most compilers.
+. If implementing/using many API's, you need to enumerate all the base classes with multiple inheritance, adding many
+  vtable ptrs to class layout (or many adapters with annoying lifetimes to track).
+
+Now consider the case where `libB` itself doesn't want to declare or depend on a separate `libApi` -- what can it do?
+
+. `libB` can include `class BaseFoo {...};` somewhere, with the same downstream coupling issues alread discussed.
+. `libB` can declare by way of some template and/or concepts, the expectation on `BaseFoo`, something like:
+
+[source,cpp]
+----
+// optional but helpful for diagnostics/debugging
+template<typename Foo>
+concept FooConcept = requires(Foo f, ...args) {
+  { f.foomethod1(args...) } -> std::same_as<int>;
+  { f.foomethod2(args...) } -> std::same_as<float>;
+};
+
+template<FooConcept Foo>
+void bfunc(const Foo&) { ... }
+----
+
+This works but now, in order to make `bfunc` work with arbitrary types, the _definition_ has been moved into the header.
+If instead we knew an enumeration of types we'd use, we could just explicitly overload or use extern templates to keep
+hiding the impl.
+
+A major problem with using templates is that compilation gets pushed into the client TU. Both the frontend
+(tokenization/parsing/binding) code and backend code generation can be quite expensive. The C++ standard library takes
+this approach and this is a reason for slow compile times in most C++ code.
+
+Are there any other options?
+
+== Data Orientation and Raw Pointers
+
+One approach is to act on builtin data types and avoid defining a `BaseFoo` class/concept-constraint at all. When
+applicable, it becomes the case that "there is no spoon."
+Instead libraries can pass around some fundamental types for handles:
+[loweralpha]
+. `int fd` -- common in posix/unix for IO to files, pipes, sockets, pseudofs, ...
+. `int handle` -- in gamedev with entity-component-systems, there may be no struct at all, but instead tables with
+  (possibly runtime defined) columns, and the handle acts as a join key for queries (can be as simple as an offset/index
+into some SoA struct). Then user defined scripts can "act on the table" or suboclumns -- the user scripts are simply
+functions with some arity of fundamental columns eg: `bool damageKills(int hp, int dmg, double resistance)` or similar.
+. function pointers, like `int (*compar)(const void *, const void *)` -- common in clib routines, like `qsort(3)`.
+. opaque pointers, eg `void*`, paired with a callback `void (*cb)(void *)` -- useful in c-style callback programming, it
+  is the user's responsibility to ensure the lifetime of data is valid at the time of callback, and that resulting
+c-style casts (effectively, `reinterpret_cast<Data*>()`), are valid. As the program size grows, it can be difficult to
+track the interactions between callbacks but for small programs, this is reasonable to follow.
+This pattern is commonly used in c-code, eg in libpcap:
+[source,c]
+----
+typedef void (*pcap_handler)(u_char *user, const struct pcap_pkthdr *h,
+    const u_char *bytes);
+int pcap_loop(pcap_t *p, int cnt,
+    pcap_handler callback, u_char *user);
+----
+
+These all work. Applications of significant complexity have been written in these styles and power safety-critical
+systems you use every day, such as in your car.
+
+== Introducing Type Erasure
+
+And yet, the power of type systems to catch errors remains alluring.
+
+In the case of callbacks, it _feels_ like it should be possible to write code which looks more natural ("straight-line
+logic").
+
+In the case of dependency management, it _feels_ like there should be some way to decouple/invert dependencies without
+sacrificing the eventual performance.
+
+
