@@ -1,0 +1,9 @@
+= Counting with `std::uncaught_exceptions()`
+:title: Counting with std::uncaught_exceptions() | Arthur Ozga
+:author: Arthur Ozga
+:revdate: 2026-10-03
+:docinfo: shared
+:stem: latexmath
+:source-highlighter: rouge
+
+TODO
