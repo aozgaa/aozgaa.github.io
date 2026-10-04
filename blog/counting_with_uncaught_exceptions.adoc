@@ -6,4 +6,70 @@
 :stem: latexmath
 :source-highlighter: rouge
 
-TODO
+In a recent discussion on
+https://discourse.bemanproject.org/t/scope-library/315/42?page=3#post_43[scope guards in C++], I saw a curious
+standard library function used to detect the exception handling state -- `std::uncaught_exception()`.
+
+Reading the cppreference page on https://en.cppreference.com/cpp/error/uncaught_exception[`uncaught_exception`]
+hints that something funny is going on -- why is there both a `bool`-returning implementation and an `int` one? And given
+the latter was added in a later C++ version (C++11 vs C++17, respectively), might there be some case the original
+`bool`-returning version didn't handle?
+
+Yes.
+
+The colloquial "double throwing" derives from https://eel.is/c++draft/except#throw-9[[except.throw\]/9]:
+
+[quote]
+____
+If the exception handling mechanism handling an uncaught exception directly invokes a function that exits via an
+exception, the function `std::terminate` is invoked.
+____
+
+So it may seem like you can't double throw -- if you throw while there is an uncaught exception, _and exit the current
+function_, the program ``std::terminate``'s.
+
++...+ but, you can throw and catch while unwinding (in a destructor) without leaving the current scope.
+
++...+ and, you can nest this as many times as you want (if you are a masochist):
+
+[source,cpp]
+----
+#include <cstdio>
+#include <exception>
+
+struct ThrowsN {
+    int n;
+    ~ThrowsN() {
+        printf("~ThrowsN{%2d} start : std::uncaught_exceptions()=%d\n",
+                n, std::uncaught_exceptions());
+        if(n == 0) return;
+        try {
+            ThrowsN tn{n-1};
+            throw n;
+        } catch(...) {
+        }
+        printf("~ThrowsN{%2d} end :   std::uncaught_exceptions()=%d\n",
+                n, std::uncaught_exceptions());
+    }
+};
+
+int main() {
+    ThrowsN tn{4};
+    return 0;
+}
+----
+
+which outputs (https://godbolt.org/z/dW1PK4bqr[godbolt]):
+
+[source,text]
+----
+~ThrowsN{ 4} start : std::uncaught_exceptions()=0
+~ThrowsN{ 3} start : std::uncaught_exceptions()=1
+~ThrowsN{ 2} start : std::uncaught_exceptions()=2
+~ThrowsN{ 1} start : std::uncaught_exceptions()=3
+~ThrowsN{ 0} start : std::uncaught_exceptions()=4
+~ThrowsN{ 1} end :   std::uncaught_exceptions()=3
+~ThrowsN{ 2} end :   std::uncaught_exceptions()=2
+~ThrowsN{ 3} end :   std::uncaught_exceptions()=1
+~ThrowsN{ 4} end :   std::uncaught_exceptions()=0
+----
